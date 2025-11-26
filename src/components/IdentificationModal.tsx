@@ -131,7 +131,8 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         if (!detectedVacationBird) return;
         
         setLoadingPreview(true);
-        const wikiData = await fetchWikiData(detectedVacationBird.name);
+        // Pass scientific name as second argument for better Wikipedia disambiguation
+        const wikiData = await fetchWikiData(detectedVacationBird.name, detectedVacationBird.sciName);
         setLoadingPreview(false);
         
         const vacationBird: Bird = {
