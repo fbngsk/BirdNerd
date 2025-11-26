@@ -1,4 +1,3 @@
-
 export type TabType = 'home' | 'dex' | 'quiz';
 export type LocationType = 'local' | 'vacation';
 
@@ -77,6 +76,11 @@ export interface LeaderboardEntry {
 export interface IdentificationResult {
     name: string;
     confidence: 'hoch' | 'mittel' | 'niedrig';
+}
+
+export interface VacationBirdResult {
+    name: string;
+    sciName: string;
 }
 
 export type LeaderboardScope = 'circle' | 'global';
