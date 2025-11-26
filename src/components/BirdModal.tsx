@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, HelpCircle, Plus, Loader2, ChevronRight, ChevronLeft, ImageIcon, Search, Volume2 } from 'lucide-react';
 import { Bird, WikiResult } from '../types';
@@ -211,9 +210,7 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                                     Bilder Vergleich
                                 </a>
                                 <a 
-                                    href={`https://www.google.com/search?q=${encodeURIComponent(bird.name + ' Gesang Merlin Bird ID')}`}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                    href="merlin:///"
                                     className="py-3 bg-white border border-gray-200 text-gray-500 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 hover:border-green-500 hover:text-green-600 transition-colors"
                                 >
                                     <Volume2 size={14} />
