@@ -210,7 +210,9 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                                     Bilder Vergleich
                                 </a>
                                 <a 
-                                    href="merlin:///"
+                                    href="https://apps.apple.com/app/merlin-bird-id-by-cornell-lab/id773457673"
+                                    target="_blank"
+                                    rel="noreferrer"
                                     className="py-3 bg-white border border-gray-200 text-gray-500 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 hover:border-green-500 hover:text-green-600 transition-colors"
                                 >
                                     <Volume2 size={14} />
