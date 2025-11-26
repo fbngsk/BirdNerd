@@ -306,7 +306,9 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
                 <div className="w-full space-y-3">
                     <a 
-                        href="merlin:///"
+                        href="https://apps.apple.com/app/merlin-bird-id-by-cornell-lab/id773457673"
+                        target="_blank"
+                        rel="noreferrer"
                         className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
                     >
                         <ExternalLink size={20}/>
