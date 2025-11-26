@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BIRDS_DB, BIRD_FAMILIES } from '../constants';
 import { Bird, LocationType } from '../types';
@@ -33,6 +32,7 @@ const FAMILY_ORDER = [
 
 interface DexViewProps {
     collectedIds: string[];
+    vacationBirds?: Bird[]; // Dynamically collected vacation birds
     onBirdClick: (bird: Bird) => void;
 }
 
@@ -112,14 +112,17 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
     );
 };
 
-export const DexView: React.FC<DexViewProps> = ({ collectedIds, onBirdClick }) => {
+export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = [], onBirdClick }) => {
     const [filter, setFilter] = useState<LocationType>('local');
     
     // 1. Filter Birds by Location Mode
-    const filteredBirds = BIRDS_DB.filter(b => {
-        const type = b.locationType || 'local';
-        return type === filter;
-    });
+    // For vacation mode, combine BIRDS_DB vacation birds with dynamically collected ones
+    const filteredBirds = filter === 'vacation' 
+        ? [...BIRDS_DB.filter(b => b.locationType === 'vacation'), ...vacationBirds]
+        : BIRDS_DB.filter(b => {
+            const type = b.locationType || 'local';
+            return type === filter;
+        });
 
     const collectedCount = filteredBirds.filter(b => collectedIds.includes(b.id)).length;
     const totalCount = filteredBirds.length;
