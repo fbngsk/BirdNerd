@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, Mic, Camera, ArrowRight, Check, Puzzle, HelpCircle, ChevronLeft, Loader2, AlertTriangle, Upload, ExternalLink, Globe, Activity } from 'lucide-react';
 import { Bird, WikiResult, LocationType, IdentificationResult } from '../types';
@@ -307,9 +306,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
                 <div className="w-full space-y-3">
                     <a 
-                        href="https://merlin.allaboutbirds.org/"
-                        target="_blank"
-                        rel="noreferrer"
+                        href="merlin:///"
                         className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
                     >
                         <ExternalLink size={20}/>
