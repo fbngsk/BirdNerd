@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Trophy, Users, Globe, Search, UserPlus, Check, Loader2, X, Copy, Share2 } from 'lucide-react';
 import { LeaderboardScope, UserProfile, LeaderboardEntry } from '../types';
 import { getAvatarUrl } from '../services/birdService';
 import { supabase } from '../lib/supabaseClient';
 import { MOCK_LEADERBOARDS } from '../constants';
+import { UserProfileModal } from './UserProfileModal';
 
 interface LeaderboardProps {
     currentUser: UserProfile;
@@ -23,6 +23,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
     const [copied, setCopied] = useState(false);
+    
+    // User Profile Modal State
+    const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
 
     // Fetch Leaderboard Data
     useEffect(() => {
@@ -230,7 +233,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
                         </div>
                     ) : (
                         leaderboardData.map((entry) => (
-                            <div key={entry.id || entry.rank} className={`flex items-center gap-3 p-3 transition-colors ${entry.isUser ? 'bg-orange/5' : 'hover:bg-gray-50'}`}>
+                            <div 
+                                key={entry.id || entry.rank} 
+                                className={`flex items-center gap-3 p-3 transition-colors cursor-pointer ${entry.isUser ? 'bg-orange/5' : 'hover:bg-gray-50 active:bg-gray-100'}`}
+                                onClick={() => !entry.isUser && entry.id && setSelectedUser(entry)}
+                            >
                                 <div className={`w-6 text-center font-bold text-sm ${entry.rank <= 3 ? 'text-orange' : 'text-gray-400'}`}>
                                     {entry.rank}.
                                 </div>
@@ -348,6 +355,17 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
                     </div>
                 )}
             </div>
+            
+            {/* User Profile Modal */}
+            {selectedUser && selectedUser.id && (
+                <UserProfileModal
+                    userId={selectedUser.id}
+                    userName={selectedUser.name}
+                    avatarSeed={selectedUser.avatarSeed}
+                    userXp={selectedUser.xp}
+                    onClose={() => setSelectedUser(null)}
+                />
+            )}
         </div>
     );
 };
