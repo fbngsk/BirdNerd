@@ -33,7 +33,8 @@ export const Header: React.FC<HeaderProps> = ({ xp, locationStatus, isLoading, u
     const isStreakActive = userProfile?.lastLogDate === today;
 
     return (
-        <header className={`pt-8 pb-4 px-6 sticky top-0 z-20 shadow-sm border-b transition-colors duration-500 ${isDarkMode ? 'bg-gray-800 border-gray-700' : isVacationMode ? 'bg-orange-50 border-gray-200/50' : 'bg-cream border-gray-200/50'}`}>
+        <header className={`pt-safe pb-4 px-6 sticky top-0 z-20 shadow-sm border-b transition-colors duration-500 ${isDarkMode ? 'bg-gray-800 border-gray-700' : isVacationMode ? 'bg-orange-50 border-gray-200/50' : 'bg-cream border-gray-200/50'}`}>
+            <div className="pt-2"></div> {/* Extra spacing after safe area */}
             <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-3">
                     {/* Avatar / Level Icon - Clickable for Profile */}
