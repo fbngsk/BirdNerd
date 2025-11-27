@@ -534,13 +534,6 @@ export default function App() {
                     )}
 
                     <DailyHoroscope />
-                    
-                    <div className="px-6 mt-8">
-                        <div className={`rounded-2xl p-4 border text-center ${isVacationMode ? 'bg-white border-orange-100' : 'bg-orange/10 border-orange/20'}`}>
-                            <h4 className="font-bold text-orange-600 text-sm mb-1">Raus in die Natur!</h4>
-                            <p className="text-xs text-gray-600">Geh nach draußen und nutze den Identifikations-Button, um neue Arten zu entdecken.</p>
-                        </div>
-                    </div>
                 </div>
             );
         }
