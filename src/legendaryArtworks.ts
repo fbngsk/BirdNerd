@@ -5,15 +5,14 @@
 export const LEGENDARY_ARTWORKS: Record<string, string> = {
     'uhu': '/legendary-cards/uhu.jpeg',
     'raubwuerger': '/legendary-cards/raubwuerger.jpeg',
-    'seeadler': '/legendary-seeadler.jpg',
-    'grosstrappe': '/legendary-grosstrappe.jpg',
-    'auerhuhn': '/legendary-auerhuhn.jpg',
-    'schwarzstorch': '/legendary-schwarzstorch.jpg',
-    'schreiadler': '/legendary-schreiadler.jpg',
-    'kornweihe': '/legendary-kornweihe.jpg',
-    'sumpfohreule': '/legendary-sumpfohreule.jpg',
-    'raubwuerger': '/legendary-raubwuerger.jpg',
-    'goldregenpfeifer': '/legendary-goldregenpfeifer.jpg',
+    'seeadler': '/legendary-cards/seeadler.jpeg',
+    'grosstrappe': '/legendary-cards/grosstrappe.jpeg',
+    'auerhuhn': '/legendary-cards/auerhuhn.jpeg',
+    'schwarzstorch': '/legendary-cards/schwarzstorch.jpeg',
+    'schreiadler': '/legendary-cards/schreiadler.jpeg',
+    'kornweihe': '/legendary-cards/kornweihe.jpeg',
+    'sumpfohreule': '/legendary-cards/sumpfohreule.jpeg',
+    'goldregenpfeifer': '/legendary-cards/goldregenpfeifer.jpeg',
 };
 
 // Helper function to get artwork URL for a bird
