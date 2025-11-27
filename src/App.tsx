@@ -13,9 +13,17 @@ import { BadgeOverlay } from './components/BadgeOverlay';
 import { StreakOverlay } from './components/StreakOverlay';
 import { ProfileModal } from './components/ProfileModal';
 import { Onboarding } from './components/Onboarding';
+import { LegendaryCard } from './components/LegendaryCard';
 import { Bird, TabType, UserProfile, Badge } from './types';
 import { BADGES_DB, BIRDS_DB, BIRD_FAMILIES, LEVEL_THRESHOLDS } from './constants';
 import { supabase } from './lib/supabaseClient';
+
+// ========================================
+// FEATURE FLAG: Legendary Cards
+// Set to false to disable legendary card popups
+// ========================================
+const ENABLE_LEGENDARY_CARDS = true;
+// ========================================
 
 export default function App() {
     const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -30,6 +38,9 @@ export default function App() {
     const [newBadge, setNewBadge] = useState<Badge | null>(null);
     const [newStreak, setNewStreak] = useState<number | null>(null);
     const [showProfile, setShowProfile] = useState(false);
+    
+    // Legendary Card State
+    const [legendaryCardBird, setLegendaryCardBird] = useState<Bird | null>(null);
     
     // User & Mode State
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -452,6 +463,14 @@ export default function App() {
             const bestBadge = earnedBadges.sort((a,b) => b.xpReward - a.xpReward)[0];
             setTimeout(() => setNewBadge(bestBadge), streakIncreased && updatedProfile.currentStreak > 1 ? 3500 : 2000); 
         }
+        
+        // 6. Show Legendary Card if bird is legendary
+        if (ENABLE_LEGENDARY_CARDS && bird.tier === 'legendary') {
+            // Show after celebration overlay closes (2.5s)
+            setTimeout(() => {
+                setLegendaryCardBird(bird);
+            }, 2500);
+        }
     };
 
     const handleRemove = async (bird: Bird) => {
@@ -560,6 +579,27 @@ export default function App() {
                 <StreakOverlay 
                     streak={newStreak} 
                     onClose={() => setNewStreak(null)} 
+                />
+            )}
+            
+            {/* Legendary Card Overlay */}
+            {ENABLE_LEGENDARY_CARDS && legendaryCardBird && (
+                <LegendaryCard
+                    bird={{
+                        name: legendaryCardBird.name,
+                        sciName: legendaryCardBird.sciName,
+                        image: legendaryCardBird.realImg || '' // Use Wikipedia image
+                    }}
+                    cardNumber={Math.floor(Math.random() * 500) + 1} // TODO: Get real card number from DB
+                    totalFound={Math.floor(Math.random() * 1000) + 100} // TODO: Get real count from DB
+                    discoveredAt={new Date().toLocaleDateString('de-DE')}
+                    discoveredBy={userProfile?.name || 'Birbz User'}
+                    location={userLocation ? 'Deutschland' : undefined}
+                    onClose={() => setLegendaryCardBird(null)}
+                    onShare={() => {
+                        // TODO: Implement share functionality
+                        setLegendaryCardBird(null);
+                    }}
                 />
             )}
             
