@@ -20,7 +20,7 @@ export interface Badge {
     title: string;
     description: string;
     icon: string;
-    condition: 'count' | 'specific' | 'rarity' | 'location' | 'family_count' | 'rarity_count' | 'time' | 'level' | 'location_count' | 'repeat_count';
+    condition: 'count' | 'specific' | 'rarity' | 'location' | 'family_count' | 'rarity_count' | 'time' | 'level' | 'location_count' | 'repeat_count' | 'country_count';
     threshold?: number; // For count, family_count, rarity_count, level, location_count, repeat_count
     targetValue?: string; // For specific id, rarity string, location type, or family key
     targetValues?: string[]; // For lists
@@ -40,6 +40,7 @@ export interface Bird {
     points: number;
     tier?: BirdTier; // For special card designs
     locationType?: LocationType;
+    country?: string; // Country where vacation bird was spotted
     img?: string; // Placeholder or internal
     realImg?: string; // From Wikipedia
     realDesc?: string; // From Wikipedia
