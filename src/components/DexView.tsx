@@ -38,16 +38,27 @@ interface DexViewProps {
 
 // Individual Card Component
 const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: boolean, onClick: () => void }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(THUMBNAIL_CACHE[bird.name] || null);
-    const [loading, setLoading] = useState(!imageUrl);
+    // For vacation birds, use the stored realImg directly
+    const initialImage = bird.realImg || THUMBNAIL_CACHE[bird.name] || null;
+    const [imageUrl, setImageUrl] = useState<string | null>(initialImage);
+    const [loading, setLoading] = useState(!initialImage);
 
     useEffect(() => {
+        // Skip fetching if we already have an image (either from realImg or cache)
         if (imageUrl) return; 
+        
+        // Skip fetching for vacation birds - they should already have realImg
+        if (bird.id.startsWith('vacation_')) {
+            setLoading(false);
+            return;
+        }
 
         let isMounted = true;
         const fetchImage = async () => {
             try {
-                const res = await fetch(`https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bird.name)}`);
+                // Use scientific name for better accuracy
+                const searchName = bird.sciName || bird.name;
+                const res = await fetch(`https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`);
                 if (res.ok) {
                     const data = await res.json();
                     const url = data.thumbnail?.source;
@@ -69,7 +80,7 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
             isMounted = false;
             clearTimeout(timer);
         };
-    }, [bird.name, imageUrl]);
+    }, [bird.id, bird.name, bird.sciName, imageUrl]);
 
     return (
         <div 
