@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Star, Quote, Loader2 } from 'lucide-react';
 import { BIRDS_DB } from '../constants';
@@ -18,6 +17,21 @@ const FUNNY_QUOTES = [
     "Balance ist wichtig. Steh heute mal nur auf einem Bein.",
     "Du bist ein bunter Vogel. Lass dich nicht in einen grauen Käfig stecken.",
     "Kopf hoch, Brust raus! Heute bist du der Boss im Garten.",
+    "Deine Nestbau-Skills sind heute Top. Zeit für Renovierung?",
+    "Nicht jeder Ast trägt dein Gewicht. Teste vorher.",
+    "Du fliegst heute gegen den Wind. Macht dich stark, aber anstrengend.",
+    "Heute bist du die Krähe, die glitzernde Dinge klaut. Ethisch fragwürdig, aber effektiv.",
+    "Dein Gesang klingt heute eher wie Gekrächze. Vielleicht weniger Kaffee?",
+    "Du könntest heute einen Artgenossen abwerben. Tinder für Vögel?",
+    "Zu viel Geflatter, zu wenig Richtung. Fokus!",
+    "Deine Federn sind zerzaust. Selbstpflege, aber dalli!",
+    "Heute bist du der Specht: nervig, aber produktiv.",
+    "Bleib am Boden. Im wörtlichen Sinn. Deine Flugroute ist Chaos.",
+    "Du hast heute das Territorial-Gen aktiviert. Chill mal.",
+    "Ein guter Tag, um Vorräte zu hamstern. Winter kommt immer.",
+    "Du singst für taube Ohren. Spar dir die Energie.",
+    "Heute pickst du nach allem, was glänzt. Aber ist es essbar?",
+    "Deine Zugvogel-Vibes sind stark. Aber wohin eigentlich?",
 ];
 
 export const DailyHoroscope: React.FC = () => {
@@ -85,10 +99,10 @@ export const DailyHoroscope: React.FC = () => {
                         <img src={image || ''} alt={bird.name} className="w-full h-full object-cover" />
                     </div>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-purple-400 uppercase mb-1">Vogel des Tages</div>
-                        <h2 className="text-2xl font-bold text-teal leading-none mb-2">{bird.name}</h2>
-                        <p className="text-xs text-gray-400 italic font-serif mb-3">{bird.sciName}</p>
+                        <h2 className="text-xl font-bold text-teal leading-tight mb-1 break-words">{bird.name}</h2>
+                        <p className="text-xs text-gray-400 italic font-serif">{bird.sciName}</p>
                     </div>
                 </div>
 
