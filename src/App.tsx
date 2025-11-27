@@ -4,6 +4,7 @@ import { BottomNav } from './components/BottomNav';
 import { DailyHoroscope } from './components/DailyHoroscope';
 import { Leaderboard } from './components/Leaderboard';
 import { DexView } from './components/DexView';
+import { HomeView } from './components/HomeView';
 import { TipsView } from './components/TipsView';
 import { QuizView } from './components/QuizView';
 import { IdentificationModal } from './components/IdentificationModal';
@@ -39,6 +40,7 @@ export default function App() {
     const [newBadge, setNewBadge] = useState<Badge | null>(null);
     const [newStreak, setNewStreak] = useState<number | null>(null);
     const [showProfile, setShowProfile] = useState(false);
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
     
     // Legendary Card State
     const [legendaryCardBird, setLegendaryCardBird] = useState<Bird | null>(null);
@@ -515,26 +517,13 @@ export default function App() {
     const renderContent = () => {
         if (activeTab === 'home') {
             return (
-                <div className="animate-fade-in pb-6">
-                    {!isVacationMode && (
-                        <Leaderboard 
-                            currentUser={userProfile} 
-                            currentXp={xp}
-                            onUpdateFriends={handleUpdateFriends}
-                        />
-                    )}
-                    
-                    {isVacationMode && (
-                         <div className="px-6 pt-4 pb-2">
-                             <div className="bg-orange-100 border border-orange-200 rounded-2xl p-4 text-center shadow-sm">
-                                 <h3 className="font-bold text-orange-600 text-lg">Urlaubs-Modus Aktiv 🌴</h3>
-                                 <p className="text-xs text-orange-800 mt-1">Du sammelst jetzt exotische Arten. Diese zählen getrennt von deinem Heimat-Ranking.</p>
-                             </div>
-                         </div>
-                    )}
-
-                    <DailyHoroscope />
-                </div>
+                <HomeView 
+                    userProfile={userProfile}
+                    xp={xp}
+                    collectedIds={collectedIds}
+                    isVacationMode={isVacationMode}
+                    onShowLeaderboard={() => setShowLeaderboard(true)}
+                />
             );
         }
         if (activeTab === 'dex') {
@@ -632,6 +621,30 @@ export default function App() {
                     onFound={handleCollect}
                     modeType={isVacationMode ? 'vacation' : 'local'}
                 />
+            )}
+
+            {/* Leaderboard Modal */}
+            {showLeaderboard && userProfile && (
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fade-in">
+                    <div className="bg-white w-full max-w-md max-h-[80vh] rounded-t-3xl sm:rounded-3xl overflow-hidden animate-slide-up">
+                        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between">
+                            <h2 className="font-bold text-lg text-teal">Bestenliste</h2>
+                            <button 
+                                onClick={() => setShowLeaderboard(false)}
+                                className="p-2 hover:bg-gray-100 rounded-full"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto">
+                            <Leaderboard 
+                                currentUser={userProfile} 
+                                currentXp={xp}
+                                onUpdateFriends={handleUpdateFriends}
+                            />
+                        </div>
+                    </div>
+                </div>
             )}
 
             <Header 
