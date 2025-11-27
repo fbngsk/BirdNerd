@@ -51,12 +51,6 @@ export default function App() {
     const [appLoading, setAppLoading] = useState(true);
     const isGuestRef = useRef(false);
     
-    // Dark Mode State
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        const saved = localStorage.getItem('birbz-darkmode');
-        return saved === 'true';
-    });
-    
     // Audio context for sounds
     const audioContextRef = useRef<AudioContext | null>(null);
     
@@ -89,16 +83,6 @@ export default function App() {
             // Audio not supported, fail silently
         }
     };
-    
-    // Save dark mode preference
-    useEffect(() => {
-        localStorage.setItem('birbz-darkmode', isDarkMode.toString());
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [isDarkMode]);
     
     // Location State
     const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -545,7 +529,7 @@ export default function App() {
     };
 
     return (
-        <div className={`min-h-screen font-sans pb-safe relative transition-colors duration-500 ${isDarkMode ? 'bg-gray-900' : isVacationMode ? 'bg-orange-50' : 'bg-cream'}`}>
+        <div className={`min-h-screen font-sans pb-safe relative transition-colors duration-500 ${isVacationMode ? 'bg-orange-50' : 'bg-cream'}`}>
             <CelebrationOverlay 
                 show={celebration.active} 
                 xp={celebration.xp}
@@ -653,9 +637,7 @@ export default function App() {
                 isLoading={false}
                 userProfile={userProfile}
                 isVacationMode={isVacationMode}
-                isDarkMode={isDarkMode}
                 onToggleMode={() => setIsVacationMode(!isVacationMode)}
-                onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
                 onAvatarClick={() => setShowProfile(true)}
             />
 
