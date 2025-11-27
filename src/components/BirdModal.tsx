@@ -60,12 +60,46 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
         }
     };
 
+    // Special styling for tier
+    const getTierStyles = () => {
+        switch (bird.tier) {
+            case 'legendary':
+                return {
+                    border: 'ring-4 ring-yellow-400 ring-offset-2',
+                    badge: 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 text-white animate-pulse',
+                    glow: 'shadow-[0_0_30px_rgba(251,191,36,0.5)]',
+                    icon: '👑',
+                    label: 'LEGENDÄR'
+                };
+            case 'epic':
+                return {
+                    border: 'ring-4 ring-purple-400 ring-offset-2',
+                    badge: 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white',
+                    glow: 'shadow-[0_0_20px_rgba(168,85,247,0.4)]',
+                    icon: '✨',
+                    label: 'EPIC'
+                };
+            default:
+                return null;
+        }
+    };
+    
+    const tierStyle = getTierStyles();
+
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-cream w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col">
+            <div className={`bg-cream w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col ${tierStyle?.border || ''} ${tierStyle?.glow || ''}`}>
+                
+                {/* Legendary/Epic Badge */}
+                {tierStyle && (
+                    <div className={`absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 ${tierStyle.badge}`}>
+                        <span>{tierStyle.icon}</span>
+                        <span>{tierStyle.label}</span>
+                    </div>
+                )}
                 
                 {/* Header Image Gallery Area */}
-                <div className="h-80 relative shrink-0 bg-gray-900 group overflow-hidden">
+                <div className={`h-80 relative shrink-0 bg-gray-900 group overflow-hidden ${bird.tier === 'legendary' ? 'bg-gradient-to-b from-yellow-900/30 to-gray-900' : bird.tier === 'epic' ? 'bg-gradient-to-b from-purple-900/30 to-gray-900' : ''}`}>
                     {currentImage ? (
                         <>
                              {/* Blurry Background for Fill */}
@@ -80,6 +114,11 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                                 alt={bird.name}
                                 className={`relative z-10 w-full h-full object-contain transition-opacity duration-500 ${loading && !wikiData ? 'opacity-0' : 'opacity-100'} ${!isCollected ? 'grayscale-[50%]' : ''}`} 
                             />
+                            
+                            {/* Legendary Sparkle Effect */}
+                            {bird.tier === 'legendary' && (
+                                <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-tr from-yellow-400/10 via-transparent to-amber-400/10 animate-pulse"></div>
+                            )}
                         </>
                     ) : (
                          <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-teal">
@@ -159,8 +198,14 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className={`flex items-center gap-3 p-4 rounded-2xl border shadow-sm ${
+                        bird.tier === 'legendary' ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200' :
+                        bird.tier === 'epic' ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200' :
+                        'bg-white border-gray-100'
+                    }`}>
                         <div className={`text-xs font-bold px-2 py-1 rounded uppercase ${
+                            bird.tier === 'legendary' ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white' :
+                            bird.tier === 'epic' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' :
                             bird.rarity === 'Häufig' ? 'bg-green-100 text-green-600' : 
                             bird.rarity === 'Selten' ? 'bg-purple-100 text-purple-600' : 
                             bird.rarity?.includes('Gefährdet') ? 'bg-red-100 text-red-600' :
@@ -168,8 +213,12 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                         }`}>
                             {bird.rarity}
                         </div>
-                        <div className="text-xs text-gray-400 border-l pl-3 border-gray-200">
-                            {bird.points} XP Belohnung
+                        <div className={`text-xs font-bold border-l pl-3 ${
+                            bird.tier === 'legendary' ? 'text-yellow-600 border-yellow-300' :
+                            bird.tier === 'epic' ? 'text-purple-600 border-purple-300' :
+                            'text-gray-400 border-gray-200'
+                        }`}>
+                            +{bird.points} XP {bird.tier === 'legendary' ? '🔥' : bird.tier === 'epic' ? '✨' : ''}
                         </div>
                         {galleryImages.length > 1 && (
                              <div className="ml-auto flex items-center gap-1 text-xs text-gray-400">
