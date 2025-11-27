@@ -77,7 +77,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         if (previewBird) {
             setLoadingPreview(true);
             setPreviewData(null);
-            fetchWikiData(previewBird.name).then(data => {
+            fetchWikiData(previewBird.name, previewBird.sciName).then(data => {
                 setPreviewData(data);
                 setLoadingPreview(false);
             });
