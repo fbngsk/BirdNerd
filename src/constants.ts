@@ -1,4 +1,3 @@
-
 import { Bird, LeaderboardEntry, LeaderboardScope, Badge, LevelInfo } from './types';
 
 // --- KONFIGURATION ---
@@ -76,7 +75,13 @@ const SPECIAL_BADGES: Badge[] = [
     { id: 'city_bird', title: 'Stadtkind', description: 'Entdecke eine Stadttaube oder Spatz.', icon: '🏙️', condition: 'specific', targetValue: 'haussperling', xpReward: 50, category: 'special' },
     { id: 'walker', title: 'Wanderer', description: 'Laufe insgesamt 10km auf Vogelsuche.', icon: '🥾', condition: 'count', threshold: 10, xpReward: 200, category: 'special' },
     { id: 'level_2', title: 'Level Up: Ornithologe', description: 'Erreiche Level 2.', icon: '⬆️', condition: 'level', threshold: 2, xpReward: 200, category: 'special' },
-    { id: 'level_5', title: 'Level Up: Legende', description: 'Erreiche Level 5.', icon: '🏆', condition: 'level', threshold: 5, xpReward: 1000, category: 'special' }
+    { id: 'level_5', title: 'Level Up: Legende', description: 'Erreiche Level 5.', icon: '🏆', condition: 'level', threshold: 5, xpReward: 1000, category: 'special' },
+    // Location-based badges
+    { id: 'urban_birder', title: 'Urbaner Ornithologe', description: 'Sammle 20 verschiedene Arten in der Stadt.', icon: '🏙️', condition: 'count', threshold: 20, xpReward: 500, category: 'special' },
+    { id: 'explorer_5', title: 'Entdecker I', description: 'Logge Vögel an 5 verschiedenen Orten.', icon: '🗺️', condition: 'location_count', threshold: 5, xpReward: 200, category: 'special' },
+    { id: 'explorer_15', title: 'Entdecker II', description: 'Logge Vögel an 15 verschiedenen Orten.', icon: '🗺️', condition: 'location_count', threshold: 15, xpReward: 500, category: 'special' },
+    { id: 'explorer_50', title: 'Entdecker III', description: 'Logge Vögel an 50 verschiedenen Orten.', icon: '🧭', condition: 'location_count', threshold: 50, xpReward: 1500, category: 'special' },
+    { id: 'loyal_10', title: 'Treuer Begleiter', description: 'Logge dieselbe Art 10 mal.', icon: '🤝', condition: 'repeat_count', threshold: 10, xpReward: 300, category: 'special' }
 ];
 
 export const BADGES_DB: Badge[] = [
