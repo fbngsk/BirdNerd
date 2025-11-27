@@ -3,7 +3,7 @@
 // Upload images to /public/ folder and reference them here
 
 export const LEGENDARY_ARTWORKS: Record<string, string> = {
-    'uhu': '/legendary-uhu.jpg',
+    'uhu': '/uhu.jpeg',
     'seeadler': '/legendary-seeadler.jpg',
     'grosstrappe': '/legendary-grosstrappe.jpg',
     'auerhuhn': '/legendary-auerhuhn.jpg',
