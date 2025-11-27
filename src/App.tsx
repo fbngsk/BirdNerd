@@ -508,6 +508,26 @@ export default function App() {
         setModalBird(null);
     };
 
+    const handleUpdateCountry = async (bird: Bird, country: string) => {
+        // Update local state
+        setVacationBirds(prev => prev.map(vb => 
+            vb.id === bird.id ? { ...vb, country } : vb
+        ));
+        
+        // Update modalBird to reflect change immediately
+        if (modalBird?.id === bird.id) {
+            setModalBird({ ...modalBird, country });
+        }
+        
+        // Update in Supabase
+        if (!isGuestRef.current && userProfile?.id) {
+            await supabase
+                .from('vacation_birds')
+                .update({ country })
+                .eq('id', bird.id);
+        }
+    };
+
     if (appLoading) {
         return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade Birbz...</div>;
     }
@@ -592,10 +612,14 @@ export default function App() {
             
             {modalBird && (
                 <BirdModal 
-                    bird={modalBird} 
+                    bird={modalBird.id.startsWith('vacation_') 
+                        ? (vacationBirds.find(vb => vb.id === modalBird.id) || modalBird)
+                        : modalBird
+                    } 
                     onClose={() => setModalBird(null)} 
                     onFound={handleCollect}
                     onRemove={handleRemove}
+                    onUpdateCountry={handleUpdateCountry}
                     isCollected={collectedIds.includes(modalBird.id)}
                     userName={userProfile?.name || 'Birbz User'}
                 />
