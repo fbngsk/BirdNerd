@@ -19,6 +19,41 @@ const SYSTEM_PROMPT = "Du bist ein Experte für Ornithologie in Deutschland. Dei
 
 const GLOBAL_BIRD_PROMPT = "Du bist ein Experte für weltweite Ornithologie. Identifiziere den Vogel auf diesem Bild. Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt im Format: {\"name\": \"Deutscher Name\", \"sciName\": \"Wissenschaftlicher Name\"}. Beispiel: {\"name\": \"Sekretär\", \"sciName\": \"Sagittarius serpentarius\"}. Wenn kein Vogel erkennbar ist, antworte mit {\"name\": \"Unbekannt\", \"sciName\": \"\"}. Kein Markdown, kein Text davor oder danach.";
 
+export const lookupBirdByName = async (birdName: string): Promise<VacationBirdResult | null> => {
+    if (!ai) return null;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Der Nutzer sucht nach einem Vogel namens "${birdName}". 
+            
+Falls dieser Vogelname existiert (egal ob deutscher oder englischer Name), antworte mit einem JSON-Objekt:
+{"name": "Korrekter deutscher Name", "sciName": "Wissenschaftlicher Name"}
+
+Falls der Name kein echter Vogelname ist, antworte mit:
+{"name": "Unbekannt", "sciName": ""}
+
+Antworte NUR mit dem JSON-Objekt, kein Markdown, kein Text davor oder danach.`
+        });
+
+        const text = response.text?.trim();
+        if (!text) return null;
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        try {
+            const result: VacationBirdResult = JSON.parse(jsonStr);
+            if (result.name === 'Unbekannt' || !result.name) return null;
+            return result;
+        } catch {
+            return null;
+        }
+    } catch (error) {
+        console.error("Bird lookup failed:", error);
+        return null;
+    }
+};
+
 export const identifyBirdFromDescription = async (description: string): Promise<string> => {
     if (!ai) return "KI nicht verfügbar";
 
