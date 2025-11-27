@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, HelpCircle, Plus, Loader2, ChevronRight, ChevronLeft, ImageIcon, Search, Volume2, Share2 } from 'lucide-react';
+import { X, CheckCircle, HelpCircle, Plus, Loader2, ChevronRight, ChevronLeft, ImageIcon, Search, Volume2, Share2, Trash2 } from 'lucide-react';
 import { Bird, WikiResult } from '../types';
 import { fetchWikiData } from '../services/birdService';
 import { ShareCard } from './ShareCard';
@@ -8,15 +8,17 @@ interface BirdModalProps {
     bird: Bird;
     onClose: () => void;
     onFound: (bird: Bird) => void;
+    onRemove?: (bird: Bird) => void;
     isCollected: boolean;
     userName?: string;
 }
 
-export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, isCollected, userName = 'Birbz User' }) => {
+export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, onRemove, isCollected, userName = 'Birbz User' }) => {
     const [wikiData, setWikiData] = useState<WikiResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
     const [showShare, setShowShare] = useState(false);
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -275,13 +277,24 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
 
                         {/* Share Button for Collected Birds */}
                         {isCollected && (
-                            <button 
-                                onClick={() => setShowShare(true)}
-                                className="w-full py-3 bg-gradient-to-r from-teal to-cyan-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-95"
-                            >
-                                <Share2 size={18} />
-                                Fund teilen
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setShowShare(true)}
+                                    className="flex-1 py-3 bg-gradient-to-r from-teal to-cyan-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-95"
+                                >
+                                    <Share2 size={18} />
+                                    Teilen
+                                </button>
+                                {onRemove && (
+                                    <button 
+                                        onClick={() => setShowRemoveConfirm(true)}
+                                        className="px-4 py-3 bg-gray-100 text-gray-500 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-colors active:scale-95"
+                                        title="Aus Sammlung entfernen"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
                         )}
 
                         {/* Action Button for Uncollected Birds */}
@@ -301,6 +314,44 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, is
                     </div>
                 </div>
             </div>
+            
+            {/* Remove Confirmation Dialog */}
+            {showRemoveConfirm && (
+                <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl animate-slide-up">
+                        <div className="text-center mb-4">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Trash2 size={32} className="text-red-500" />
+                            </div>
+                            <h3 className="font-bold text-lg text-gray-800">Vogel entfernen?</h3>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Möchtest du <strong>{bird.name}</strong> wirklich aus deiner Sammlung entfernen? 
+                                Du verlierst {bird.points} XP.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowRemoveConfirm(false)}
+                                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                            >
+                                Abbrechen
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (onRemove) {
+                                        onRemove(bird);
+                                        setShowRemoveConfirm(false);
+                                        onClose();
+                                    }
+                                }}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors"
+                            >
+                                Entfernen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Share Card Modal */}
             {showShare && (
