@@ -589,18 +589,20 @@ export default function App() {
                     bird={{
                         name: legendaryCardBird.name,
                         sciName: legendaryCardBird.sciName,
-                        image: getLegendaryArtwork(legendaryCardBird.id) || legendaryCardBird.realImg || ''
+                        image: (() => {
+                            const artwork = getLegendaryArtwork(legendaryCardBird.id);
+                            console.log('Legendary card debug:', {
+                                birdId: legendaryCardBird.id,
+                                artwork,
+                                realImg: legendaryCardBird.realImg
+                            });
+                            return artwork || legendaryCardBird.realImg || '';
+                        })()
                     }}
-                    cardNumber={Math.floor(Math.random() * 500) + 1} // TODO: Get real card number from DB
-                    totalFound={Math.floor(Math.random() * 1000) + 100} // TODO: Get real count from DB
                     discoveredAt={new Date().toLocaleDateString('de-DE')}
                     discoveredBy={userProfile?.name || 'Birbz User'}
                     location={userLocation ? 'Deutschland' : undefined}
                     onClose={() => setLegendaryCardBird(null)}
-                    onShare={() => {
-                        // TODO: Implement share functionality
-                        setLegendaryCardBird(null);
-                    }}
                 />
             )}
             
@@ -620,8 +622,14 @@ export default function App() {
                     user={userProfile}
                     xp={xp}
                     collectedCount={collectedIds.length}
+                    collectedIds={collectedIds}
                     onClose={() => setShowProfile(false)}
                     onLogout={handleLogout}
+                    onShowLegendaryCard={(bird) => {
+                        setShowProfile(false);
+                        // Add realImg for the card
+                        setLegendaryCardBird(bird);
+                    }}
                 />
             )}
 
