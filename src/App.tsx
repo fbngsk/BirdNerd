@@ -454,6 +454,36 @@ export default function App() {
         }
     };
 
+    const handleRemove = async (bird: Bird) => {
+        // Remove from collectedIds
+        const newIds = collectedIds.filter(id => id !== bird.id);
+        
+        // Subtract XP (minimum 0)
+        const newXp = Math.max(0, xp - (bird.points || 10));
+        
+        // If it's a vacation bird, also remove from vacationBirds
+        if (bird.id.startsWith('vacation_')) {
+            setVacationBirds(prev => prev.filter(vb => vb.id !== bird.id));
+            
+            // Delete from Supabase
+            if (!isGuestRef.current && userProfile?.id) {
+                await supabase.from('vacation_birds').delete().eq('id', bird.id);
+            }
+        }
+        
+        // Update state
+        setCollectedIds(newIds);
+        setXp(newXp);
+        
+        // Sync to cloud
+        if (userProfile) {
+            syncWithSupabase(userProfile, newXp, newIds);
+        }
+        
+        // Close modal
+        setModalBird(null);
+    };
+
     if (appLoading) {
         return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade Birbz...</div>;
     }
@@ -538,6 +568,7 @@ export default function App() {
                     bird={modalBird} 
                     onClose={() => setModalBird(null)} 
                     onFound={handleCollect}
+                    onRemove={handleRemove}
                     isCollected={collectedIds.includes(modalBird.id)}
                     userName={userProfile?.name || 'Birbz User'}
                 />
