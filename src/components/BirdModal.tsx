@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, HelpCircle, Plus, Loader2, ChevronRight, ChevronLeft, ImageIcon, Search, Volume2, Share2, Trash2 } from 'lucide-react';
+import { X, CheckCircle, HelpCircle, Plus, Loader2, ChevronRight, ChevronLeft, ImageIcon, Search, Volume2, Share2, Trash2, MapPin, Check } from 'lucide-react';
 import { Bird, WikiResult } from '../types';
 import { fetchWikiData } from '../services/birdService';
 import { ShareCard } from './ShareCard';
@@ -9,16 +9,19 @@ interface BirdModalProps {
     onClose: () => void;
     onFound: (bird: Bird) => void;
     onRemove?: (bird: Bird) => void;
+    onUpdateCountry?: (bird: Bird, country: string) => void;
     isCollected: boolean;
     userName?: string;
 }
 
-export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, onRemove, isCollected, userName = 'Birbz User' }) => {
+export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, onRemove, onUpdateCountry, isCollected, userName = 'Birbz User' }) => {
     const [wikiData, setWikiData] = useState<WikiResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
     const [showShare, setShowShare] = useState(false);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+    const [editingCountry, setEditingCountry] = useState(false);
+    const [countryInput, setCountryInput] = useState(bird.country || '');
 
     useEffect(() => {
         let isMounted = true;
@@ -228,6 +231,55 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, on
                              </div>
                         )}
                     </div>
+
+                    {/* Country for vacation birds */}
+                    {bird.locationType === 'vacation' && isCollected && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <MapPin size={16} className="text-orange-500" />
+                                    <span className="text-sm font-medium text-orange-800">Fundort</span>
+                                </div>
+                                {!editingCountry && (
+                                    <button 
+                                        onClick={() => setEditingCountry(true)}
+                                        className="text-xs text-orange-600 hover:text-orange-800"
+                                    >
+                                        {bird.country ? 'Bearbeiten' : 'Hinzufügen'}
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {editingCountry ? (
+                                <div className="mt-2 flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={countryInput}
+                                        onChange={(e) => setCountryInput(e.target.value)}
+                                        placeholder="z.B. Botswana, Thailand..."
+                                        className="flex-1 px-3 py-2 rounded-lg border border-orange-200 bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        autoFocus
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (onUpdateCountry && countryInput.trim()) {
+                                                onUpdateCountry(bird, countryInput.trim());
+                                            }
+                                            setEditingCountry(false);
+                                        }}
+                                        disabled={!countryInput.trim()}
+                                        className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                                    >
+                                        <Check size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="mt-1 text-sm text-orange-700">
+                                    {bird.country || <span className="italic text-orange-400">Noch kein Ort angegeben</span>}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Description */}
                     <div>
