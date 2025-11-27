@@ -3,14 +3,9 @@ import { BIRDS_DB, EBIRD_API_KEY } from '../constants';
 
 // --- HELPER: Generate Bird Avatar URL ---
 export const getAvatarUrl = (seed: string): string => {
-    // Simple hash to convert string seed to a consistent number for the lock
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash |= 0; // Convert to 32bit integer
-    }
-    // Use loremflickr with bird category and lock
-    return `https://loremflickr.com/200/200/bird?lock=${Math.abs(hash)}`;
+    // Use DiceBear for stable, deterministic avatars based on seed
+    // Using 'adventurer' style for friendly bird-watcher vibes
+    return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 };
 
 export const fetchWikiData = async (birdName: string, sciName?: string): Promise<WikiResult> => {
@@ -82,7 +77,21 @@ export const fetchWikiData = async (birdName: string, sciName?: string): Promise
                         })
                         .filter((src: string | undefined) => !!src)
                         .map((src: string) => normalize(src)) // Normalize all to https
-                        .filter((src: string) => src !== mainImgNormalized) // Remove duplicate of main image
+                        .filter((src: string) => {
+                            // Better duplicate detection: compare base filename without size params
+                            const getBaseFilename = (url: string) => {
+                                // Extract filename from Wikipedia URL, ignoring size variants
+                                const match = url.match(/\/([^\/]+)\.(jpg|jpeg|png|JPG|JPEG|PNG)$/i);
+                                if (match) return match[1].toLowerCase();
+                                // Also handle thumb URLs like /thumb/a/ab/Filename.jpg/800px-Filename.jpg
+                                const thumbMatch = url.match(/\/(\d+px-)?([^\/]+)\.(jpg|jpeg|png|JPG|JPEG|PNG)$/i);
+                                if (thumbMatch) return thumbMatch[2].toLowerCase();
+                                return url;
+                            };
+                            const mainBase = getBaseFilename(mainImgNormalized);
+                            const srcBase = getBaseFilename(src);
+                            return srcBase !== mainBase;
+                        })
                         .filter((val: string, idx: number, self: string[]) => self.indexOf(val) === idx) // Dedupe list
                         .slice(0, 4); // Take up to 4 additional images
                     
