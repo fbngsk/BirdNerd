@@ -4,6 +4,7 @@
 
 export const LEGENDARY_ARTWORKS: Record<string, string> = {
     'uhu': '/legendary-cards/uhu.jpeg',
+    'raubwuerger': '/legendary-cards/raubwuerger.jpeg',
     'seeadler': '/legendary-seeadler.jpg',
     'grosstrappe': '/legendary-grosstrappe.jpg',
     'auerhuhn': '/legendary-auerhuhn.jpg',
