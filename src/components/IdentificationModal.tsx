@@ -236,17 +236,23 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
                 <div className="flex-1 overflow-y-auto no-scrollbar">
                     <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-4">
-                        <div className="h-48 bg-gray-100 relative flex items-center justify-center">
+                        <div className="h-56 bg-gray-100 relative flex items-center justify-center overflow-hidden">
                             {/* Prioritize Uploaded Image for Preview if exists */}
                             {selectedImage ? (
-                                <img src={selectedImage} className="w-full h-full object-cover" alt="Uploaded" />
+                                <>
+                                    <div className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110" style={{ backgroundImage: `url(${selectedImage})` }}></div>
+                                    <img src={selectedImage} className="relative z-10 max-w-full max-h-full object-contain" alt="Uploaded" />
+                                </>
                             ) : loadingPreview ? (
                                 <div className="flex flex-col items-center gap-2 text-gray-400">
                                     <Loader2 className="animate-spin" size={24} />
                                     <span className="text-xs">Lade Bild...</span>
                                 </div>
                             ) : previewData?.img ? (
-                                <img src={previewData.img} className="w-full h-full object-cover" alt={previewBird.name} />
+                                <>
+                                    <div className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110" style={{ backgroundImage: `url(${previewData.img})` }}></div>
+                                    <img src={previewData.img} className="relative z-10 max-w-full max-h-full object-contain" alt={previewBird.name} />
+                                </>
                             ) : (
                                 <div className="text-6xl">🐦</div>
                             )}
