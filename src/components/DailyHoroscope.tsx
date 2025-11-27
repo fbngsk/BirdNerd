@@ -63,8 +63,8 @@ export const DailyHoroscope: React.FC = () => {
         setBird(selectedBird);
         setQuote(FUNNY_QUOTES[quoteIndex]);
 
-        // Fetch Image
-        fetchWikiData(selectedBird.name).then(data => {
+        // Fetch Image - use scientific name for better Wikipedia results
+        fetchWikiData(selectedBird.name, selectedBird.sciName).then(data => {
             // Use wiki image or fallback to avatar
             setImage(data.img || getAvatarUrl(selectedBird.id));
             setLoading(false);
