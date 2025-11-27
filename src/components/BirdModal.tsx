@@ -27,7 +27,7 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, on
              // Always try to fetch wiki data to get the gallery images, 
              // even if we have a single realImg already
              setLoading(true);
-             const data = await fetchWikiData(bird.name);
+             const data = await fetchWikiData(bird.name, bird.sciName);
              if (isMounted) {
                  setWikiData(data);
                  setLoading(false);
