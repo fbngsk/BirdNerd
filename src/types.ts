@@ -30,12 +30,15 @@ export interface Badge {
     category?: 'milestone' | 'streak' | 'family' | 'special'; // UI Grouping
 }
 
+export type BirdTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
 export interface Bird {
     id: string;
     name: string;
     sciName: string;
     rarity: string;
     points: number;
+    tier?: BirdTier; // For special card designs
     locationType?: LocationType;
     img?: string; // Placeholder or internal
     realImg?: string; // From Wikipedia
