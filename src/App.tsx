@@ -565,6 +565,7 @@ export default function App() {
                     collectedIds={collectedIds}
                     isVacationMode={isVacationMode}
                     onShowLeaderboard={() => setShowLeaderboard(true)}
+                    onNavigateToDex={() => setActiveTab('dex')}
                 />
             );
         }
@@ -667,6 +668,7 @@ export default function App() {
                     onClose={() => setShowIdentification(false)}
                     onFound={handleCollect}
                     modeType={isVacationMode ? 'vacation' : 'local'}
+                    onToggleMode={() => setIsVacationMode(!isVacationMode)}
                 />
             )}
 
