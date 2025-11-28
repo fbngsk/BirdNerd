@@ -40,8 +40,8 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
     // Wizard State
     const [wizardStep, setWizardStep] = useState(0);
-    const [wizardFilters, setWizardFilters] = useState<{size?: string, colors?: string[], habitat?: string}>({});
-    const [wizardResults, setWizardResults] = useState<Bird[]>([]);
+    const [wizardFilters, setWizardFilters] = useState<{size?: string}>({});
+    const [wizardSearch, setWizardSearch] = useState('');
     
     // --- MANUAL SEARCH LOGIC ---
     useEffect(() => {
@@ -670,220 +670,121 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     };
 
     const renderWizard = () => {
-        // Size categories mapped to bird families/genera
-        const sizeMapping: Record<string, string[]> = {
-            'spatz': ['Passer', 'Prunella', 'Serinus', 'Carduelis', 'Spinus', 'Linaria', 'Acanthis', 'Regulus', 'Phylloscopus', 'Sylvia', 'Aegithalos', 'Certhia', 'Sitta', 'Troglodytes', 'Emberiza', 'Fringilla', 'Cyanistes', 'Parus', 'Periparus', 'Poecile', 'Lophophanes', 'Erithacus', 'Ficedula', 'Muscicapa', 'Phoenicurus', 'Saxicola', 'Motacilla', 'Anthus', 'Hirundo', 'Delichon', 'Riparia'],
-            'amsel': ['Turdus', 'Sturnus', 'Oriolus', 'Garrulus', 'Alauda', 'Lullula', 'Cuculus', 'Upupa', 'Alcedo', 'Merops', 'Dendrocopos', 'Dryobates', 'Dendrocoptes', 'Jynx', 'Lanius', 'Coloeus', 'Streptopelia', 'Columba', 'Coturnix', 'Perdix', 'Rallus', 'Porzana', 'Gallinula', 'Scolopax', 'Gallinago', 'Actitis', 'Tringa', 'Calidris', 'Charadrius', 'Pluvialis', 'Vanellus'],
-            'kraehe': ['Corvus', 'Pica', 'Nucifraga', 'Pyrrhocorax', 'Picus', 'Dryocopus', 'Asio', 'Athene', 'Strix', 'Tyto', 'Falco', 'Accipiter', 'Circus', 'Buteo', 'Numenius', 'Limosa', 'Haematopus', 'Recurvirostra', 'Fulica', 'Larus', 'Chroicocephalus', 'Sterna', 'Phalacrocorax', 'Anas', 'Aythya', 'Mergus', 'Bucephala', 'Podiceps', 'Tachybaptus'],
-            'gans': ['Anser', 'Branta', 'Cygnus', 'Tadorna', 'Grus', 'Ciconia', 'Ardea', 'Egretta', 'Nycticorax', 'Botaurus', 'Haliaeetus', 'Aquila', 'Milvus', 'Pernis', 'Pandion', 'Bubo', 'Gavia', 'Morus', 'Pelecanus', 'Phasianus', 'Tetrao', 'Bonasa']
-        };
-        
-        // Color keywords to search in bird names/descriptions
-        const colorMapping: Record<string, string[]> = {
-            'black': ['schwarz', 'Rabe', 'Krähe', 'Amsel', 'Star', 'Dohle', 'Kormoran', 'Bläss'],
-            'white': ['weiß', 'Silber', 'Schnee', 'Schwan', 'Möwe', 'Reiher', 'Storch'],
-            'brown': ['braun', 'Sperling', 'Lerche', 'Drossel', 'Bussard', 'Milan', 'Adler', 'Eule', 'Kauz'],
-            'red': ['rot', 'Gimpel', 'Dompfaff', 'Rotkehlchen', 'Rotschwanz', 'Hänfling', 'Kreuzschnabel'],
-            'blue': ['blau', 'Meise', 'Eisvogel', 'Blaukehlchen'],
-            'yellow': ['gelb', 'Pirol', 'Goldammer', 'Girlitz', 'Zeisig', 'Stelze'],
-            'green': ['grün', 'Specht', 'Grünling', 'Grünfink', 'Laubsänger']
-        };
-        
-        // Habitat/activity mapping
-        const habitatMapping: Record<string, string[]> = {
-            'boden': ['Lerche', 'Pieper', 'Stelze', 'Amsel', 'Drossel', 'Star', 'Spatz', 'Sperling', 'Fasan', 'Rebhuhn', 'Wachtel', 'Kiebitz', 'Regenpfeifer'],
-            'baum': ['Specht', 'Kleiber', 'Baumläufer', 'Meise', 'Fink', 'Zeisig', 'Gimpel', 'Kernbeißer', 'Eichelhäher', 'Elster', 'Krähe', 'Rabe', 'Pirol', 'Kuckuck', 'Taube', 'Eule', 'Kauz'],
-            'futter': ['Meise', 'Fink', 'Spatz', 'Sperling', 'Kleiber', 'Specht', 'Rotkehlchen', 'Amsel', 'Gimpel', 'Grünfink', 'Zeisig', 'Star'],
-            'flug': ['Schwalbe', 'Segler', 'Falke', 'Habicht', 'Sperber', 'Bussard', 'Milan', 'Adler', 'Möwe', 'Seeschwalbe', 'Kormoran', 'Reiher', 'Storch', 'Kranich'],
-            'wasser': ['Ente', 'Gans', 'Schwan', 'Taucher', 'Reiher', 'Kormoran', 'Möwe', 'Ralle', 'Teichhuhn', 'Blässhuhn', 'Säger', 'Gänsesäger', 'Eisvogel', 'Wasseramsel']
+        // Size categories - use genus to categorize
+        const sizeGroups = {
+            'klein': { 
+                label: 'Klein (Spatz)', 
+                desc: 'Meisen, Finken, Zaunkönig...',
+                genera: ['Passer', 'Prunella', 'Serinus', 'Carduelis', 'Spinus', 'Linaria', 'Acanthis', 'Regulus', 'Phylloscopus', 'Sylvia', 'Aegithalos', 'Certhia', 'Sitta', 'Troglodytes', 'Emberiza', 'Fringilla', 'Cyanistes', 'Parus', 'Periparus', 'Poecile', 'Lophophanes', 'Erithacus', 'Ficedula', 'Muscicapa', 'Phoenicurus', 'Saxicola', 'Motacilla', 'Anthus', 'Hirundo', 'Delichon', 'Riparia', 'Chloris', 'Pyrrhula', 'Coccothraustes', 'Loxia', 'Oenanthe', 'Locustella', 'Acrocephalus', 'Hippolais']
+            },
+            'mittel': { 
+                label: 'Mittel (Amsel)', 
+                desc: 'Drosseln, Stare, Spechte...',
+                genera: ['Turdus', 'Sturnus', 'Oriolus', 'Garrulus', 'Alauda', 'Lullula', 'Cuculus', 'Upupa', 'Alcedo', 'Merops', 'Dendrocopos', 'Dryobates', 'Dendrocoptes', 'Jynx', 'Lanius', 'Streptopelia', 'Columba', 'Coturnix', 'Perdix', 'Rallus', 'Porzana', 'Gallinula', 'Scolopax', 'Gallinago', 'Actitis', 'Tringa', 'Calidris', 'Charadrius', 'Pluvialis', 'Vanellus', 'Apus', 'Caprimulgus']
+            },
+            'gross': { 
+                label: 'Groß (Krähe)', 
+                desc: 'Krähen, Tauben, Eulen, Greife...',
+                genera: ['Corvus', 'Pica', 'Nucifraga', 'Pyrrhocorax', 'Coloeus', 'Picus', 'Dryocopus', 'Asio', 'Athene', 'Strix', 'Tyto', 'Falco', 'Accipiter', 'Circus', 'Buteo', 'Numenius', 'Limosa', 'Haematopus', 'Recurvirostra', 'Fulica', 'Larus', 'Chroicocephalus', 'Sterna', 'Phalacrocorax', 'Anas', 'Aythya', 'Mergus', 'Bucephala', 'Podiceps', 'Tachybaptus', 'Columba']
+            },
+            'sehr_gross': { 
+                label: 'Sehr groß (Gans)', 
+                desc: 'Gänse, Schwäne, Störche, Reiher...',
+                genera: ['Anser', 'Branta', 'Cygnus', 'Tadorna', 'Grus', 'Ciconia', 'Ardea', 'Egretta', 'Nycticorax', 'Botaurus', 'Haliaeetus', 'Aquila', 'Milvus', 'Pernis', 'Pandion', 'Bubo', 'Gavia', 'Morus', 'Pelecanus', 'Phasianus', 'Tetrao', 'Bonasa']
+            }
         };
 
-        // Filter birds based on current selections
-        const filterBirds = () => {
-            let filtered = BIRDS_DB.filter(b => (b.locationType || 'local') === modeType);
-            
-            // Filter by size
-            if (wizardFilters.size && sizeMapping[wizardFilters.size]) {
-                const genera = sizeMapping[wizardFilters.size];
-                filtered = filtered.filter(b => 
-                    genera.some(genus => b.sciName.startsWith(genus))
-                );
-            }
-            
-            // Filter by colors (OR - any color matches)
-            if (wizardFilters.colors && wizardFilters.colors.length > 0) {
-                const colorKeywords = wizardFilters.colors.flatMap(c => colorMapping[c] || []);
-                filtered = filtered.filter(b => 
-                    colorKeywords.some(keyword => 
-                        b.name.toLowerCase().includes(keyword.toLowerCase())
-                    )
-                );
-            }
-            
-            // Filter by habitat
-            if (wizardFilters.habitat && habitatMapping[wizardFilters.habitat]) {
-                const keywords = habitatMapping[wizardFilters.habitat];
-                filtered = filtered.filter(b => 
-                    keywords.some(keyword => 
-                        b.name.toLowerCase().includes(keyword.toLowerCase())
-                    )
-                );
-            }
-            
-            return filtered;
+        // Get all local birds
+        const allBirds = BIRDS_DB.filter(b => (b.locationType || 'local') === modeType);
+
+        // Filter by size only (simple and effective)
+        const filterBySize = (size: string | undefined) => {
+            if (!size || !sizeGroups[size as keyof typeof sizeGroups]) return allBirds;
+            const genera = sizeGroups[size as keyof typeof sizeGroups].genera;
+            return allBirds.filter(b => 
+                genera.some(genus => b.sciName.startsWith(genus + ' '))
+            );
         };
 
-        const currentFilteredCount = filterBirds().length;
-        const totalBirds = BIRDS_DB.filter(b => (b.locationType || 'local') === modeType).length;
+        const filteredBirds = filterBySize(wizardFilters.size);
 
-        // Step 0: Size
+        // Step 0: Size selection
         const renderSizeStep = () => (
-            <div className="space-y-4 animate-fade-in">
-                <div className="text-center mb-4">
+            <div className="space-y-3 animate-fade-in">
+                <div className="text-center mb-6">
                     <h3 className="text-xl font-bold text-teal">Wie groß war der Vogel?</h3>
-                    <p className="text-sm text-gray-400 mt-1">{totalBirds} Arten möglich</p>
+                    <p className="text-sm text-gray-400 mt-1">{allBirds.length} Arten in der Datenbank</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    {WIZARD_SIZES.map(size => (
+                
+                {Object.entries(sizeGroups).map(([key, group]) => {
+                    const count = filterBySize(key).length;
+                    return (
                         <button 
-                            key={size.id} 
+                            key={key}
                             onClick={() => {
-                                setWizardFilters(f => ({ ...f, size: size.id }));
+                                setWizardFilters({ size: key });
                                 setWizardStep(1);
                             }} 
-                            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal hover:bg-teal/5 transition-all"
+                            className="w-full bg-white p-4 rounded-xl border border-gray-200 hover:border-teal hover:bg-teal/5 transition-all text-left flex items-center justify-between"
                         >
-                            <div className="text-3xl mb-2">{size.icon}</div>
-                            <div className="font-bold text-gray-700 text-sm">{size.label}</div>
+                            <div>
+                                <div className="font-bold text-gray-700">{group.label}</div>
+                                <div className="text-xs text-gray-400">{group.desc}</div>
+                            </div>
+                            <div className="text-sm text-teal font-medium">{count} Arten</div>
                         </button>
-                    ))}
-                </div>
+                    );
+                })}
+                
                 <button 
-                    onClick={() => setWizardStep(1)}
-                    className="w-full text-center text-sm text-gray-400 hover:text-teal py-2"
+                    onClick={() => {
+                        setWizardFilters({});
+                        setWizardStep(1);
+                    }}
+                    className="w-full text-center text-sm text-gray-400 hover:text-teal py-2 mt-2"
                 >
-                    Überspringen
+                    Weiß nicht / Alle anzeigen
                 </button>
             </div>
         );
 
-        // Step 1: Color (multi-select)
-        const renderColorStep = () => {
-            const selectedColors = wizardFilters.colors || [];
-            const toggleColor = (colorId: string) => {
-                setWizardFilters(f => ({
-                    ...f,
-                    colors: selectedColors.includes(colorId)
-                        ? selectedColors.filter(c => c !== colorId)
-                        : [...selectedColors, colorId]
-                }));
-            };
-            
-            return (
-                <div className="space-y-4 animate-fade-in">
-                    <div className="text-center mb-4">
-                        <h3 className="text-xl font-bold text-teal">Welche Farben hatte er?</h3>
-                        <p className="text-sm text-gray-400 mt-1">Mehrfachauswahl möglich • {currentFilteredCount} Arten übrig</p>
-                    </div>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                        {WIZARD_COLORS.map(col => (
-                            <button 
-                                key={col.id} 
-                                onClick={() => toggleColor(col.id)} 
-                                className={`w-14 h-14 rounded-full shadow-sm transform hover:scale-110 transition-all ${col.color} ${
-                                    selectedColors.includes(col.id) ? 'ring-4 ring-teal ring-offset-2' : ''
-                                }`}
-                            />
-                        ))}
-                    </div>
-                    <button 
-                        onClick={() => setWizardStep(2)}
-                        className="w-full py-3 bg-teal text-white font-bold rounded-xl hover:bg-teal-700 transition-colors mt-4"
-                    >
-                        Weiter {selectedColors.length > 0 ? `(${selectedColors.length} gewählt)` : ''}
-                    </button>
-                </div>
-            );
-        };
-
-        // Step 2: Habitat/Activity
-        const renderHabitatStep = () => {
-            const habitats = [
-                { id: 'boden', label: 'Am Boden', icon: '🌱' },
-                { id: 'baum', label: 'Im Baum / Gebüsch', icon: '🌳' },
-                { id: 'futter', label: 'Am Futterhaus', icon: '🏠' },
-                { id: 'flug', label: 'Im Flug', icon: '🦅' },
-                { id: 'wasser', label: 'Am/im Wasser', icon: '💧' },
-            ];
-            
-            return (
-                <div className="space-y-4 animate-fade-in">
-                    <div className="text-center mb-4">
-                        <h3 className="text-xl font-bold text-teal">Wo hast du ihn gesehen?</h3>
-                        <p className="text-sm text-gray-400 mt-1">{currentFilteredCount} Arten übrig</p>
-                    </div>
-                    <div className="space-y-2">
-                        {habitats.map(h => (
-                            <button 
-                                key={h.id} 
-                                onClick={() => {
-                                    setWizardFilters(f => ({ ...f, habitat: h.id }));
-                                    setWizardResults(filterBirds().filter(b => {
-                                        const keywords = habitatMapping[h.id] || [];
-                                        return keywords.some(kw => b.name.toLowerCase().includes(kw.toLowerCase()));
-                                    }));
-                                    setWizardStep(3);
-                                }} 
-                                className="w-full p-3 bg-white rounded-xl border border-gray-200 hover:border-teal hover:bg-teal/5 transition-all flex items-center gap-3"
-                            >
-                                <span className="text-2xl">{h.icon}</span>
-                                <span className="font-bold text-gray-700">{h.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                    <button 
-                        onClick={() => {
-                            setWizardResults(filterBirds());
-                            setWizardStep(3);
-                        }}
-                        className="w-full text-center text-sm text-gray-400 hover:text-teal py-2"
-                    >
-                        Überspringen → Alle {currentFilteredCount} anzeigen
-                    </button>
-                </div>
-            );
-        };
-
-        // Step 3: Results list
+        // Step 1: Results list with search
         const renderResultsStep = () => {
-            const results = wizardResults.length > 0 ? wizardResults : filterBirds();
+            const displayBirds = wizardSearch.trim() 
+                ? filteredBirds.filter(b => 
+                    b.name.toLowerCase().includes(wizardSearch.toLowerCase()) ||
+                    b.sciName.toLowerCase().includes(wizardSearch.toLowerCase())
+                  )
+                : filteredBirds;
             
             return (
                 <div className="space-y-4 animate-fade-in h-full flex flex-col">
                     <div className="text-center">
-                        <h3 className="text-xl font-bold text-teal">Mögliche Arten</h3>
-                        <p className="text-sm text-gray-400 mt-1">{results.length} Treffer</p>
+                        <h3 className="text-xl font-bold text-teal">Wähle deinen Vogel</h3>
+                        <p className="text-sm text-gray-400 mt-1">
+                            {wizardFilters.size ? sizeGroups[wizardFilters.size as keyof typeof sizeGroups]?.label : 'Alle Größen'} • {filteredBirds.length} Arten
+                        </p>
                     </div>
                     
-                    {results.length === 0 ? (
+                    {/* Search within results */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <input 
+                            type="text"
+                            placeholder="Liste durchsuchen..."
+                            className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:border-teal text-sm"
+                            value={wizardSearch}
+                            onChange={(e) => setWizardSearch(e.target.value)}
+                        />
+                    </div>
+                    
+                    {displayBirds.length === 0 ? (
                         <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center text-gray-400">
-                                <p className="mb-4">Keine Vögel gefunden mit diesen Kriterien.</p>
-                                <button 
-                                    onClick={() => {
-                                        setWizardFilters({});
-                                        setWizardResults([]);
-                                        setWizardStep(0);
-                                    }}
-                                    className="text-teal font-bold hover:underline"
-                                >
-                                    Neu starten
-                                </button>
-                            </div>
+                            <p className="text-gray-400">Keine Treffer für "{wizardSearch}"</p>
                         </div>
                     ) : (
-                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-                            {results.slice(0, 30).map(bird => (
+                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-4">
+                            {displayBirds.map(bird => (
                                 <button 
                                     key={bird.id}
                                     onClick={() => setPreviewBird(bird)}
@@ -896,11 +797,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                                     <ChevronLeft size={16} className="text-gray-300 rotate-180" />
                                 </button>
                             ))}
-                            {results.length > 30 && (
-                                <p className="text-center text-xs text-gray-400 py-2">
-                                    + {results.length - 30} weitere Arten
-                                </p>
-                            )}
                         </div>
                     )}
                 </div>
@@ -910,8 +806,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         // If a bird was selected, show preview
         if (previewBird) return renderPreview();
 
-        const steps = [renderSizeStep, renderColorStep, renderHabitatStep, renderResultsStep];
-
         return (
             <div className="h-full flex flex-col">
                 <div className="flex items-center mb-4">
@@ -920,9 +814,8 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             if (wizardStep === 0) {
                                 setMode('menu');
                                 setWizardFilters({});
-                                setWizardResults([]);
                             } else {
-                                setWizardStep(s => s - 1);
+                                setWizardStep(0);
                             }
                         }} 
                         className="text-gray-400 hover:text-teal text-sm"
@@ -930,14 +823,14 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         Zurück
                     </button>
                     <div className="flex-1 flex justify-center gap-2">
-                        {[0, 1, 2, 3].map(i => (
+                        {[0, 1].map(i => (
                             <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === wizardStep ? 'bg-teal' : i < wizardStep ? 'bg-teal/50' : 'bg-gray-200'}`}></div>
                         ))}
                     </div>
                     <div className="w-12"></div>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                    {steps[wizardStep]()}
+                    {wizardStep === 0 ? renderSizeStep() : renderResultsStep()}
                 </div>
             </div>
         );
