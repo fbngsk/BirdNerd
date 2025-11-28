@@ -52,16 +52,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             try {
                 // Get all users ordered by XP
                 const { data, error } = await supabase
-                    .from('users')
+                    .from('profiles')
                     .select('id, xp')
                     .order('xp', { ascending: false });
                 
                 if (data && !error) {
                     const userIndex = data.findIndex(u => u.id === userProfile.id);
-                    setRankInfo({
-                        rank: userIndex + 1,
-                        totalUsers: data.length
-                    });
+                    if (userIndex !== -1) {
+                        setRankInfo({
+                            rank: userIndex + 1,
+                            totalUsers: data.length
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching rank:', err);
