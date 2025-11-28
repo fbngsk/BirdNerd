@@ -22,7 +22,6 @@ const FUNNY_QUOTES = [
     "Du fliegst heute gegen den Wind. Macht dich stark, aber anstrengend.",
     "Heute bist du die Krähe, die glitzernde Dinge klaut. Ethisch fragwürdig, aber effektiv.",
     "Dein Gesang klingt heute eher wie Gekrächze. Vielleicht weniger Kaffee?",
-    "Du könntest heute einen Artgenossen abwerben. Tinder für Vögel?",
     "Zu viel Geflatter, zu wenig Richtung. Fokus!",
     "Deine Federn sind zerzaust. Selbstpflege, aber dalli!",
     "Heute bist du der Specht: nervig, aber produktiv.",
