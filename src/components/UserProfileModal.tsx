@@ -108,12 +108,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         fetchUserData();
     }, [userId]);
 
+    // Block body scroll when modal is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
+
     const levelInfo = getLevelInfo(userXp);
     const localBirds = collectedBirds.filter(b => b.locationType !== 'vacation');
     const vacationBirds = collectedBirds.filter(b => b.locationType === 'vacation');
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center animate-fade-in" onClick={onClose}>
+        <div 
+            className="fixed inset-0 bg-black/60 z-[100] flex items-end justify-center animate-fade-in" 
+            onClick={onClose}
+            style={{ width: '100vw', height: '100vh' }}
+        >
             <div 
                 className="bg-cream w-full max-w-lg rounded-t-3xl max-h-[85vh] overflow-hidden animate-slide-up"
                 onClick={e => e.stopPropagation()}
