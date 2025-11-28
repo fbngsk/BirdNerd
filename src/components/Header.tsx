@@ -31,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ xp, locationStatus, isLoading, u
     return (
         <header 
             className={`pb-4 px-6 sticky top-0 z-20 shadow-sm border-b transition-colors duration-500 ${isVacationMode ? 'bg-orange-50 border-gray-200/50' : 'bg-cream border-gray-200/50'}`}
-            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px) + 12px, 20px)' }}
         >
             <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-3">
