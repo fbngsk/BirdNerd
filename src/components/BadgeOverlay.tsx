@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from '../types';
 
 interface BadgeOverlayProps {
@@ -7,12 +7,23 @@ interface BadgeOverlayProps {
 }
 
 export const BadgeOverlay: React.FC<BadgeOverlayProps> = ({ badge, onClose }) => {
+    // Block body scroll when overlay is shown
+    useEffect(() => {
+        if (badge) {
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = '';
+            };
+        }
+    }, [badge]);
+
     if (!badge) return null;
     
     return (
         <div 
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in cursor-pointer" 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in cursor-pointer" 
             onClick={onClose}
+            style={{ width: '100vw', height: '100vh' }}
         >
             <div className="text-center text-white p-8 max-w-xs w-full relative">
                 {/* Glow effect */}
