@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Award, Trophy, Calendar, LogOut, ArrowRight, Lock, Star, Activity, Users, Clock, MapPin, Sparkles, Share2 } from 'lucide-react';
+import { X, Award, Trophy, Calendar, LogOut, ArrowRight, Lock, Star, Activity, Users, Clock, MapPin, Sparkles, Share2, Trash2, ExternalLink } from 'lucide-react';
 import { UserProfile, Badge, Bird } from '../types';
 import { BADGES_DB, LEVEL_THRESHOLDS, BIRDS_DB } from '../constants';
 import { getAvatarUrl } from '../services/birdService';
@@ -13,15 +13,18 @@ interface ProfileModalProps {
     collectedIds: string[];
     onClose: () => void;
     onLogout: () => void;
+    onDeleteAccount?: () => void;
     onShowLegendaryCard?: (bird: Bird) => void;
 }
 
 type ProfileTab = 'badges' | 'stats' | 'cards';
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedCount, collectedIds, onClose, onLogout, onShowLegendaryCard }) => {
+export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedCount, collectedIds, onClose, onLogout, onDeleteAccount, onShowLegendaryCard }) => {
     const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
     const [activeTab, setActiveTab] = useState<ProfileTab>('badges');
     const [shareSuccess, setShareSuccess] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showLegal, setShowLegal] = useState(false);
     
     const getLevelInfo = (currentXp: number) => {
         return LEVEL_THRESHOLDS.find(l => currentXp < l.max) || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
@@ -296,6 +299,111 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                         </div>
                     </div>
                 )}
+                
+                {/* Delete Account Confirmation */}
+                {showDeleteConfirm && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                            <h3 className="text-lg font-bold text-red-600 mb-2">Konto löschen?</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Alle deine Daten werden unwiderruflich gelöscht: Profil, gesammelte Vögel, XP, Badges und Statistiken.
+                            </p>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold"
+                                >
+                                    Abbrechen
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        onDeleteAccount?.();
+                                        setShowDeleteConfirm(false);
+                                    }}
+                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold"
+                                >
+                                    Endgültig löschen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Legal Info Modal */}
+                {showLegal && (
+                    <div className="absolute inset-0 bg-white z-50 overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-teal">Rechtliches</h3>
+                                <button onClick={() => setShowLegal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-6 text-sm text-gray-600">
+                                <section>
+                                    <h4 className="font-bold text-teal mb-2">Impressum</h4>
+                                    <p>Schønlein Media GmbH</p>
+                                    <p>Tempelhofer Ufer 36</p>
+                                    <p>10963 Berlin</p>
+                                </section>
+                                
+                                <section>
+                                    <h4 className="font-bold text-teal mb-2">Datenschutz</h4>
+                                    <p className="mb-2"><strong>Welche Daten speichern wir?</strong></p>
+                                    <ul className="list-disc list-inside space-y-1 mb-3">
+                                        <li>E-Mail-Adresse und Passwort (verschlüsselt)</li>
+                                        <li>Benutzername und Heimatregion</li>
+                                        <li>Gesammelte Vögel, XP, Badges, Streaks</li>
+                                        <li>GPS-Standort (gerundet auf 1km, nur wenn erlaubt)</li>
+                                    </ul>
+                                    
+                                    <p className="mb-2"><strong>Warum?</strong></p>
+                                    <p className="mb-3">Zur Bereitstellung der App-Funktionen: Sammlung, Statistiken, Bestenliste.</p>
+                                    
+                                    <p className="mb-2"><strong>Wie lange?</strong></p>
+                                    <p className="mb-3">Bis du dein Konto löschst. Dann werden alle Daten unwiderruflich entfernt.</p>
+                                    
+                                    <p className="mb-2"><strong>Hosting</strong></p>
+                                    <p className="mb-3">Daten werden bei Supabase (EU) und Vercel gespeichert.</p>
+                                    
+                                    <p className="mb-2"><strong>Deine Rechte</strong></p>
+                                    <p>Du kannst jederzeit dein Konto löschen (im Profil). Bei Fragen: datenschutz@schonlein.media</p>
+                                </section>
+                                
+                                <section>
+                                    <h4 className="font-bold text-teal mb-2">Bildquellen</h4>
+                                    <p>Vogelbilder und Beschreibungen stammen von Wikipedia (CC-Lizenz).</p>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Footer Actions */}
+                <div className="px-6 py-4 border-t border-gray-100 space-y-2">
+                    <button 
+                        onClick={() => setShowLegal(true)}
+                        className="w-full py-2 text-gray-400 text-xs hover:text-gray-600 flex items-center justify-center gap-1"
+                    >
+                        Impressum & Datenschutz <ExternalLink size={12} />
+                    </button>
+                    
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={onLogout}
+                            className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200"
+                        >
+                            <LogOut size={16} /> Abmelden
+                        </button>
+                        <button 
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="py-3 px-4 bg-red-50 text-red-500 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
