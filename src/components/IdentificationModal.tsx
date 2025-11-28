@@ -1032,15 +1032,22 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     return (
         <div className="fixed inset-0 bg-cream z-40 animate-fade-in overflow-hidden">
             <div 
-                className="w-full h-full flex flex-col pt-safe"
-                style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+                className="w-full h-full flex flex-col"
+                style={{ 
+                    paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+                    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)'
+                }}
             >
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm text-teal hover:bg-gray-100 transition-colors z-50" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+                <button 
+                    onClick={onClose} 
+                    className="absolute right-4 p-2 bg-white rounded-full shadow-sm text-teal hover:bg-gray-100 transition-colors z-50" 
+                    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+                >
                     <X size={24} />
                 </button>
                 
-                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-6">
-                    <div className="max-w-sm mx-auto">
+                <div className="flex-1 overflow-y-auto no-scrollbar px-6">
+                    <div className="max-w-sm mx-auto pb-20">
                         {mode === 'menu' && renderMenu()}
                         {mode === 'manual' && renderManual()}
                         {mode === 'sound' && renderSound()}
