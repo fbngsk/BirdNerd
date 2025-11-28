@@ -3,7 +3,6 @@ import { Trophy, Users, Globe, Search, UserPlus, Check, Loader2, X, Copy, Share2
 import { LeaderboardScope, UserProfile, LeaderboardEntry } from '../types';
 import { getAvatarUrl } from '../services/birdService';
 import { supabase } from '../lib/supabaseClient';
-import { MOCK_LEADERBOARDS } from '../constants';
 import { UserProfileModal } from './UserProfileModal';
 
 interface LeaderboardProps {
@@ -23,6 +22,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [guestMessage, setGuestMessage] = useState(false);
     
     // User Profile Modal State
     const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
@@ -44,22 +44,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
                         isUser: true
                     };
 
-                    let mockData = [...MOCK_LEADERBOARDS[scope]];
-                    // Add guest to mock data if not present (simple simulation)
-                    if (!mockData.find(m => m.isUser)) {
-                        mockData.push(guestEntry);
-                    } else {
-                        // Update the 'isUser' mock entry with real local XP
-                        mockData = mockData.map(m => m.isUser ? guestEntry : m);
-                    }
-
-                    // Sort
-                    const ranked = mockData.sort((a, b) => b.xp - a.xp).map((entry, idx) => ({
-                        ...entry,
-                        rank: idx + 1
-                    }));
-                    
-                    setLeaderboardData(ranked);
+                    // Guest mode: only show the guest user, no fake data
+                    setLeaderboardData([{ ...guestEntry, rank: 1 }]);
                     setLoading(false);
                     return;
                 }
@@ -153,7 +139,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
     const addFriend = async (friendId: string) => {
         // Guests can't add friends permanently
         if (!currentUser.id) {
-            alert("Bitte erstelle ein Konto, um Freunde hinzuzufügen.");
+            setGuestMessage(true);
+            setTimeout(() => setGuestMessage(false), 3000);
             return;
         }
 
@@ -213,6 +200,15 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, currentXp
                         </button>
                     </div>
                 </div>
+
+                {/* Guest Message Banner */}
+                {guestMessage && (
+                    <div className="mx-4 mt-2 p-3 bg-orange-100 border border-orange-200 rounded-xl text-center animate-fade-in">
+                        <p className="text-sm text-orange-800 font-medium">
+                            Erstelle ein Konto, um Freunde hinzuzufügen!
+                        </p>
+                    </div>
+                )}
 
                 {/* List Content */}
                 <div className="divide-y divide-gray-50 min-h-[250px]">
