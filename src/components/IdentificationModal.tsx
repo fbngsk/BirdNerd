@@ -1030,18 +1030,23 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     };
 
     return (
-        <div className="fixed inset-0 bg-cream z-40 flex items-center justify-center p-6 animate-fade-in">
-            <div className="w-full max-w-sm h-[600px] relative flex flex-col">
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm text-teal hover:bg-gray-100 transition-colors z-50">
+        <div className="fixed inset-0 bg-cream z-40 animate-fade-in overflow-hidden">
+            <div 
+                className="w-full h-full flex flex-col pt-safe"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-sm text-teal hover:bg-gray-100 transition-colors z-50" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
                     <X size={24} />
                 </button>
                 
-                <div className="flex-1 overflow-y-auto no-scrollbar pt-2">
-                    {mode === 'menu' && renderMenu()}
-                    {mode === 'manual' && renderManual()}
-                    {mode === 'sound' && renderSound()}
-                    {mode === 'wizard' && renderWizard()}
-                    {mode === 'photo' && renderPhoto()}
+                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-6">
+                    <div className="max-w-sm mx-auto">
+                        {mode === 'menu' && renderMenu()}
+                        {mode === 'manual' && renderManual()}
+                        {mode === 'sound' && renderSound()}
+                        {mode === 'wizard' && renderWizard()}
+                        {mode === 'photo' && renderPhoto()}
+                    </div>
                 </div>
             </div>
         </div>
