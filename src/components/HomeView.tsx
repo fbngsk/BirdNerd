@@ -206,7 +206,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
 
             {/* Horoscope - Compact Version */}
-            <DailyHoroscope />
+            <DailyHoroscope onBirdClick={onBirdClick} />
 
             {/* Quick Action Hint */}
             <div className="px-6 mt-4">
