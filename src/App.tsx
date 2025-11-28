@@ -223,6 +223,41 @@ export default function App() {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (!userProfile) return;
+        
+        try {
+            // Delete user data from all tables
+            if (!isGuestRef.current) {
+                // Delete vacation birds
+                await supabase.from('vacation_birds').delete().eq('user_id', userProfile.id);
+                
+                // Delete bird logs
+                await supabase.from('bird_logs').delete().eq('user_id', userProfile.id);
+                
+                // Delete profile
+                await supabase.from('profiles').delete().eq('id', userProfile.id);
+                
+                // Sign out (this won't delete auth user, but that's handled by Supabase admin)
+                await supabase.auth.signOut();
+            }
+            
+            // Reset local state
+            setUserProfile(null);
+            setCollectedIds([]);
+            setVacationBirds([]);
+            setXp(0);
+            setShowProfile(false);
+            setActiveTab('home');
+            isGuestRef.current = false;
+            
+            alert('Dein Konto wurde gelöscht.');
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            alert('Fehler beim Löschen des Kontos. Bitte versuche es erneut.');
+        }
+    };
+
     const handleUpdateFriends = (newFriends: string[]) => {
         if (userProfile) {
             setUserProfile({
@@ -710,6 +745,7 @@ export default function App() {
                     collectedIds={collectedIds}
                     onClose={() => setShowProfile(false)}
                     onLogout={handleLogout}
+                    onDeleteAccount={handleDeleteAccount}
                     onShowLegendaryCard={(bird) => {
                         setShowProfile(false);
                         // Add realImg for the card
