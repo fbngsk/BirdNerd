@@ -254,13 +254,23 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                     <div className="text-[10px] text-gray-400">Suche in der {modeType === 'vacation' ? 'Urlaubs' : 'lokalen'} Datenbank.</div>
                 </button>
 
-                <button onClick={() => setMode('wizard')} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-teal hover:shadow-md transition-all text-left group">
-                    <div className="bg-orange/10 w-10 h-10 rounded-full flex items-center justify-center text-orange mb-3 group-hover:scale-110 transition-transform">
-                        <Puzzle size={20}/>
+                {modeType === 'vacation' ? (
+                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 text-left opacity-60">
+                        <div className="bg-gray-200 w-10 h-10 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                            <Puzzle size={20}/>
+                        </div>
+                        <div className="font-bold text-gray-400">Assistent</div>
+                        <div className="text-[10px] text-gray-400">Nicht verfügbar im Urlaubsmodus</div>
                     </div>
-                    <div className="font-bold text-teal">Assistent</div>
-                    <div className="text-[10px] text-gray-400">Schritt-für-Schritt Bestimmungshilfe.</div>
-                </button>
+                ) : (
+                    <button onClick={() => setMode('wizard')} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-teal hover:shadow-md transition-all text-left group">
+                        <div className="bg-orange/10 w-10 h-10 rounded-full flex items-center justify-center text-orange mb-3 group-hover:scale-110 transition-transform">
+                            <Puzzle size={20}/>
+                        </div>
+                        <div className="font-bold text-teal">Assistent</div>
+                        <div className="text-[10px] text-gray-400">Schritt-für-Schritt Bestimmungshilfe.</div>
+                    </button>
+                )}
 
                 <button onClick={() => setMode('sound')} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-teal hover:shadow-md transition-all text-left group relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-50"></div>
@@ -281,6 +291,25 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                     <div className="text-[10px] text-gray-400">Kamera & Bildanalyse (KI).</div>
                 </button>
             </div>
+            
+            {modeType === 'vacation' && (
+                <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-200">
+                    <p className="text-sm text-orange-800 mb-2">
+                        <strong>Tipp für den Urlaub:</strong>
+                    </p>
+                    <p className="text-xs text-orange-700">
+                        Für die Vogelbestimmung im Ausland empfehlen wir die kostenlose <strong>Merlin Bird ID</strong> App vom Cornell Lab. Sie funktioniert offline und kennt Vögel weltweit!
+                    </p>
+                    <a 
+                        href="https://merlin.allaboutbirds.org/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-2 text-xs text-orange-600 font-medium hover:underline"
+                    >
+                        Mehr erfahren <ExternalLink size={12} />
+                    </a>
+                </div>
+            )}
         </div>
     );
 
