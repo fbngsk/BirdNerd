@@ -572,11 +572,16 @@ export const BIRDS_DB: Bird[] = [
 ];
 
 export const LEVEL_THRESHOLDS: LevelInfo[] = [
-    { max: 100, level: 1, title: 'Beobachter', next: 500 },
-    { max: 500, level: 2, title: 'Ornithologe', next: 1200 },
-    { max: 1200, level: 3, title: 'Experte', next: 3000 },
-    { max: 3000, level: 4, title: 'Meister', next: 10000 },
-    { max: 10000, level: 5, title: 'Legende', next: 99999 }
+    { max: 500, level: 1, title: 'Anfänger', next: 500 },
+    { max: 1500, level: 2, title: 'Beobachter', next: 1500 },
+    { max: 3500, level: 3, title: 'Entdecker', next: 3500 },
+    { max: 7000, level: 4, title: 'Kenner', next: 7000 },
+    { max: 12000, level: 5, title: 'Experte', next: 12000 },
+    { max: 20000, level: 6, title: 'Ornithologe', next: 20000 },
+    { max: 35000, level: 7, title: 'Meister', next: 35000 },
+    { max: 60000, level: 8, title: 'Großmeister', next: 60000 },
+    { max: 100000, level: 9, title: 'Legende', next: 100000 },
+    { max: 999999, level: 10, title: 'Vogelgott', next: 999999 }
 ];
 
 export const MOCK_LEADERBOARDS: Record<LeaderboardScope, LeaderboardEntry[]> = {
