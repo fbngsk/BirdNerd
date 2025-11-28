@@ -13,6 +13,7 @@ interface HomeViewProps {
     isVacationMode: boolean;
     onShowLeaderboard: () => void;
     onNavigateToDex: () => void;
+    onBirdClick?: (bird: Bird) => void;
 }
 
 interface RankInfo {
@@ -26,7 +27,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     collectedIds,
     isVacationMode,
     onShowLeaderboard,
-    onNavigateToDex
+    onNavigateToDex,
+    onBirdClick
 }) => {
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [lastBird, setLastBird] = useState<Bird | null>(null);
@@ -169,7 +171,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </button>
 
                 {/* Last Sighting Card */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <div 
+                    className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 ${lastBird && onBirdClick ? 'cursor-pointer hover:border-purple-200 active:scale-[0.98] transition-all' : ''}`}
+                    onClick={() => lastBird && onBirdClick?.(lastBird)}
+                >
                     <div className="flex items-center justify-between mb-2">
                         <Clock size={18} className="text-purple-500" />
                         {lastBird && (
