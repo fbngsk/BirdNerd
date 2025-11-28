@@ -306,6 +306,17 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, on
                         </div>
                         {displayDesc && <p className="text-[10px] text-gray-400 mt-2 text-right">Quelle: Wikipedia</p>}
                     </div>
+                    
+                    {/* Female Bird Search - Dimorphism Helper */}
+                    <a 
+                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(bird.name + ' Weibchen')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 py-3 bg-purple-50 border border-purple-200 text-purple-600 rounded-xl text-sm font-medium hover:bg-purple-100 transition-colors"
+                    >
+                        <Search size={16} />
+                        Weibchen anzeigen (♀)
+                    </a>
 
                     {/* Actions */}
                     <div className="space-y-3 pt-2">
