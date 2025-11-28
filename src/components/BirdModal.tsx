@@ -30,9 +30,13 @@ export const fetchWikiData = async (birdName: string, sciName?: string): Promise
 const fetchWikiDataFromLang = async (birdName: string, sciName: string | undefined, lang: 'de' | 'en'): Promise<WikiResult> => {
     // For better accuracy, try scientific name FIRST if provided
     // This prevents confusion between similar German names (e.g., Königswitwe vs Königsweber)
+    // Wikipedia uses underscores in URLs for spaces
+    const sciNameForUrl = sciName?.replace(/ /g, '_');
+    
     const searchNames = sciName 
         ? [
-            sciName,                      // Scientific name first (most accurate)
+            sciNameForUrl!,               // Scientific name with underscores (most accurate for URLs)
+            sciName,                      // Scientific name with spaces
             birdName,                     // Then German name
             `${birdName} (Vogel)`,        // German disambiguation for birds
             `${birdName} (Art)`,          // Species disambiguation
@@ -69,7 +73,8 @@ const fetchWikiDataFromLang = async (birdName: string, sciName: string | undefin
                                   desc.toLowerCase().includes('ordnung') ||
                                   searchName.includes('(Vogel)') ||
                                   searchName.includes('(Art)') ||
-                                  searchName === sciName;
+                                  searchName === sciName ||
+                                  searchName === sciNameForUrl;
             
             // If searching by German name and doesn't look like a bird article, try next
             if (searchName === birdName && !isBirdArticle && searchNames.length > 1) {
