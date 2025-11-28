@@ -98,10 +98,11 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, on
     const tierStyle = getTierStyles();
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className={`bg-cream w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col ${tierStyle?.border || ''} ${tierStyle?.glow || ''}`}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+                <div className={`bg-cream w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up flex flex-col ${tierStyle?.border || ''} ${tierStyle?.glow || ''}`}>
                 
-                {/* Legendary/Epic Badge */}
+                    {/* Legendary/Epic Badge */}
                 {tierStyle && (
                     <div className={`absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 ${tierStyle.badge}`}>
                         <span>{tierStyle.icon}</span>
@@ -430,6 +431,7 @@ export const BirdModal: React.FC<BirdModalProps> = ({ bird, onClose, onFound, on
                     onClose={() => setShowShare(false)}
                 />
             )}
+            </div>
         </div>
     );
 };
