@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BIRDS_DB, BIRD_FAMILIES } from '../constants';
 import { Bird, LocationType } from '../types';
-import { Home, Plane, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Home, Plane, Loader2, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 
 // Simple cache to avoid re-fetching Wikipedia thumbnails constantly
 const THUMBNAIL_CACHE: Record<string, string> = {};
@@ -130,15 +130,25 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
 
 export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = [], onBirdClick }) => {
     const [filter, setFilter] = useState<LocationType>('local');
+    const [searchTerm, setSearchTerm] = useState('');
     
     // 1. Filter Birds by Location Mode
     // For vacation mode, combine BIRDS_DB vacation birds with dynamically collected ones
-    const filteredBirds = filter === 'vacation' 
+    let filteredBirds = filter === 'vacation' 
         ? [...BIRDS_DB.filter(b => b.locationType === 'vacation'), ...vacationBirds]
         : BIRDS_DB.filter(b => {
             const type = b.locationType || 'local';
             return type === filter;
         });
+    
+    // 2. Apply search filter
+    if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        filteredBirds = filteredBirds.filter(b => 
+            b.name.toLowerCase().includes(term) || 
+            b.sciName.toLowerCase().includes(term)
+        );
+    }
 
     const collectedCount = filteredBirds.filter(b => collectedIds.includes(b.id)).length;
     const totalCount = filteredBirds.length;
@@ -174,7 +184,7 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
             </div>
 
             {/* Tabs */}
-            <div className="flex p-1 bg-gray-100 rounded-xl mb-6">
+            <div className="flex p-1 bg-gray-100 rounded-xl mb-4">
                 <button 
                     onClick={() => setFilter('local')} 
                     className={`flex-1 py-2 px-4 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${filter === 'local' ? 'bg-white text-teal shadow-sm' : 'text-gray-400'}`}
@@ -187,6 +197,26 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
                 >
                     <Plane size={14}/> Urlaub
                 </button>
+            </div>
+            
+            {/* Search Field */}
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                    type="text"
+                    placeholder="Vogel suchen..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-10 outline-none focus:border-teal focus:ring-2 focus:ring-teal/10 text-sm"
+                />
+                {searchTerm && (
+                    <button 
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                        <X size={18} />
+                    </button>
+                )}
             </div>
 
             <div className="space-y-8">
