@@ -528,6 +528,26 @@ export default function App() {
         }
     };
 
+    const handleUpdateImage = async (bird: Bird, imageUrl: string) => {
+        // Update local state
+        setVacationBirds(prev => prev.map(vb => 
+            vb.id === bird.id ? { ...vb, realImg: imageUrl } : vb
+        ));
+        
+        // Update modalBird to reflect change immediately
+        if (modalBird?.id === bird.id) {
+            setModalBird({ ...modalBird, realImg: imageUrl });
+        }
+        
+        // Update in Supabase
+        if (!isGuestRef.current && userProfile?.id) {
+            await supabase
+                .from('vacation_birds')
+                .update({ real_img: imageUrl })
+                .eq('id', bird.id);
+        }
+    };
+
     if (appLoading) {
         return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade Birbz...</div>;
     }
@@ -620,6 +640,7 @@ export default function App() {
                     onFound={handleCollect}
                     onRemove={handleRemove}
                     onUpdateCountry={handleUpdateCountry}
+                    onUpdateImage={handleUpdateImage}
                     isCollected={collectedIds.includes(modalBird.id)}
                     userName={userProfile?.name || 'Birbz User'}
                 />
