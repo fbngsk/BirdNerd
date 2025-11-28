@@ -48,13 +48,13 @@ export const Header: React.FC<HeaderProps> = ({ xp, locationStatus, isLoading, u
                         </div>
                     </div>
                     
-                    <div className="flex flex-col">
+                    <div className="flex flex-col min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                             <h1 onClick={onAvatarClick} className={`font-bold text-lg leading-none transition-colors cursor-pointer ${isVacationMode ? 'text-orange-600' : 'text-teal'}`}>
+                             <h1 onClick={onAvatarClick} className={`font-bold text-lg leading-none transition-colors cursor-pointer truncate ${isVacationMode ? 'text-orange-600' : 'text-teal'}`}>
                                 {userProfile?.name || 'Gast'}
                             </h1>
                             
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${isStreakActive ? 'bg-orange-100 border-orange-200 text-orange-600' : 'bg-gray-100 border-gray-200 text-gray-400'}`}>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border shrink-0 ${isStreakActive ? 'bg-orange-100 border-orange-200 text-orange-600' : 'bg-gray-100 border-gray-200 text-gray-400'}`}>
                                 <Flame size={12} fill={isStreakActive ? "currentColor" : "none"} />
                                 <span className="text-[10px] font-bold">{streak}</span>
                             </div>
@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ xp, locationStatus, isLoading, u
                     </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="flex items-center gap-2">
                         <button 
                             onClick={onToggleMode}
