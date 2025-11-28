@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Bird, ArrowRight, User, Mail, Lock, Loader2, Ghost } from 'lucide-react';
 import { UserProfile } from '../types';
@@ -14,8 +13,10 @@ const AVATAR_SEEDS = ['Falke', 'Adler', 'Spatz', 'Meise', 'Eule', 'Rabe', 'Spech
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Register
+    const [isResetPassword, setIsResetPassword] = useState(false); // Password reset mode
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     // Form Data
     const [email, setEmail] = useState('');
@@ -23,6 +24,28 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [name, setName] = useState('');
     const [region, setRegion] = useState('');
     const [selectedSeed, setSelectedSeed] = useState(AVATAR_SEEDS[0]);
+
+    const handlePasswordReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        setSuccessMessage(null);
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
+
+            if (error) throw error;
+
+            setSuccessMessage('Falls ein Konto mit dieser E-Mail existiert, erhältst du einen Link zum Zurücksetzen.');
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Ein Fehler ist aufgetreten.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,10 +168,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
                 
                 <h2 className="text-2xl font-bold text-teal mb-2">
-                    {isLogin ? 'Willkommen zurück!' : 'Neu bei Birbz?'}
+                    {isResetPassword ? 'Passwort zurücksetzen' : isLogin ? 'Willkommen zurück!' : 'Neu bei Birbz?'}
                 </h2>
                 <p className="text-gray-500 mb-8 text-sm">
-                    {isLogin ? 'Melde dich an, um deine Sammlung zu laden.' : 'Erstelle ein Konto, um deine Entdeckungen zu speichern.'}
+                    {isResetPassword 
+                        ? 'Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen.'
+                        : isLogin 
+                            ? 'Melde dich an, um deine Sammlung zu laden.' 
+                            : 'Erstelle ein Konto, um deine Entdeckungen zu speichern.'}
                 </p>
 
                 {error && (
@@ -156,7 +183,45 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         {error}
                     </div>
                 )}
+                
+                {successMessage && (
+                    <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-6 border border-green-100">
+                        {successMessage}
+                    </div>
+                )}
 
+                {/* Password Reset Form */}
+                {isResetPassword ? (
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
+                            <input 
+                                type="email" 
+                                required
+                                placeholder="E-Mail Adresse"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:border-teal focus:ring-2 focus:ring-teal/10"
+                            />
+                        </div>
+                        
+                        <button 
+                            onClick={handlePasswordReset}
+                            disabled={loading || !email}
+                            className="w-full py-4 bg-teal text-white rounded-2xl font-bold shadow-lg shadow-teal/20 flex items-center justify-center gap-2 hover:bg-teal-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? <Loader2 className="animate-spin" /> : 'Link senden'}
+                        </button>
+                        
+                        <button 
+                            type="button"
+                            onClick={() => { setIsResetPassword(false); setError(null); setSuccessMessage(null); }}
+                            className="text-sm text-gray-500 hover:text-teal mt-2"
+                        >
+                            ← Zurück zum Login
+                        </button>
+                    </div>
+                ) : (
                 <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-4">
                     
                     {/* Registration Only: Avatar & Name */}
@@ -213,6 +278,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:border-teal focus:ring-2 focus:ring-teal/10"
                         />
                     </div>
+                    
+                    {isLogin && (
+                        <button 
+                            type="button"
+                            onClick={() => { setIsResetPassword(true); setError(null); setSuccessMessage(null); }}
+                            className="text-sm text-gray-400 hover:text-teal text-right w-full -mt-2"
+                        >
+                            Passwort vergessen?
+                        </button>
+                    )}
 
                     {!isLogin && (
                         <input 
@@ -232,7 +307,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Anmelden' : 'Konto erstellen')}
                     </button>
                 </form>
+                )}
 
+                {!isResetPassword && (
+                <>
                 <div className="mt-6 text-sm text-gray-500">
                     {isLogin ? 'Noch kein Konto? ' : 'Bereits registriert? '}
                     <button 
@@ -252,6 +330,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         Gastzugang (Demo)
                     </button>
                 </div>
+                </>
+                )}
             </div>
         </div>
     );
