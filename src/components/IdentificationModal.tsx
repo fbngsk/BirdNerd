@@ -332,14 +332,31 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                 <div className="animate-fade-in h-full flex flex-col items-center justify-center text-center relative">
                     <button onClick={() => { setMode('menu'); setDetectedVacationBird(null); setVacationSearchResult(null); setVacationCountry(''); }} className="absolute top-0 left-0 text-gray-400 text-sm hover:text-teal">Zurück</button>
                     
-                    <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200 max-w-xs">
-                        <Globe className="mx-auto text-orange-500 mb-3" size={40} />
-                        <h3 className="text-orange-800 font-bold text-lg mb-1">{detectedVacationBird.name}</h3>
-                        <p className="text-xs text-orange-600 italic mb-3">{detectedVacationBird.sciName}</p>
+                    <div className="bg-white rounded-2xl border border-orange-200 max-w-sm w-full shadow-lg overflow-hidden">
+                        {/* Header with bird info */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-4 text-white text-center">
+                            <Globe className="mx-auto mb-2" size={32} />
+                            <h3 className="font-bold text-lg">{detectedVacationBird.name}</h3>
+                            <p className="text-orange-100 text-sm italic">{detectedVacationBird.sciName}</p>
+                        </div>
+                        
+                        {/* Verify link */}
+                        <div className="px-4 py-3 bg-orange-50 border-b border-orange-100">
+                            <a 
+                                href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(detectedVacationBird.sciName + ' bird')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 text-sm text-orange-700 hover:text-orange-900 font-medium"
+                            >
+                                <Search size={16} />
+                                Mit Google Bilder überprüfen
+                                <ExternalLink size={14} />
+                            </a>
+                        </div>
                         
                         {/* Country Input */}
-                        <div className="mb-4">
-                            <label className="block text-xs text-orange-700 font-medium mb-1 text-left">
+                        <div className="p-4">
+                            <label className="block text-xs text-gray-600 font-medium mb-2">
                                 Wo hast du diesen Vogel entdeckt?
                             </label>
                             <input
@@ -347,22 +364,23 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                                 value={vacationCountry}
                                 onChange={(e) => setVacationCountry(e.target.value)}
                                 placeholder="z.B. Botswana, Thailand, Spanien..."
-                                className="w-full px-3 py-2 rounded-lg border border-orange-200 bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white"
                             />
                         </div>
                         
-                        <div className="space-y-2">
+                        {/* Actions */}
+                        <div className="px-4 pb-4 space-y-2">
                             <button 
                                 onClick={handleAddVacationBird}
                                 disabled={loadingPreview || !vacationCountry.trim()}
-                                className="w-full px-4 py-3 bg-orange text-white font-bold rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                {loadingPreview ? <Loader2 className="animate-spin" size={18} /> : <Globe size={18} />}
-                                Zur Sammlung hinzufügen
+                                {loadingPreview ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                                Bestätigen & hinzufügen
                             </button>
                             <button 
                                 onClick={() => { setDetectedVacationBird(null); setVacationSearchResult(null); setVacationCountry(''); }} 
-                                className="w-full px-4 py-2 bg-orange-100 text-orange-700 font-bold rounded-lg hover:bg-orange-200 text-sm"
+                                className="w-full px-4 py-2.5 text-gray-500 font-medium rounded-xl hover:bg-gray-100 text-sm transition-colors"
                             >
                                 Abbrechen
                             </button>
@@ -579,14 +597,31 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
                 {/* Vacation Bird Detected - Not in local DB */}
                 {detectedVacationBird && !photoError && (
-                    <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200 max-w-xs animate-fade-in">
-                        <Globe className="mx-auto text-orange-500 mb-3" size={40} />
-                        <h3 className="text-orange-800 font-bold text-lg mb-1">{detectedVacationBird.name}</h3>
-                        <p className="text-xs text-orange-600 italic mb-3">{detectedVacationBird.sciName}</p>
+                    <div className="bg-white rounded-2xl border border-orange-200 max-w-sm w-full animate-fade-in shadow-lg overflow-hidden">
+                        {/* Header with bird info */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-4 text-white text-center">
+                            <Globe className="mx-auto mb-2" size={32} />
+                            <h3 className="font-bold text-lg">{detectedVacationBird.name}</h3>
+                            <p className="text-orange-100 text-sm italic">{detectedVacationBird.sciName}</p>
+                        </div>
+                        
+                        {/* Verify link */}
+                        <div className="px-4 py-3 bg-orange-50 border-b border-orange-100">
+                            <a 
+                                href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(detectedVacationBird.sciName + ' bird')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 text-sm text-orange-700 hover:text-orange-900 font-medium"
+                            >
+                                <Search size={16} />
+                                Mit Google Bilder überprüfen
+                                <ExternalLink size={14} />
+                            </a>
+                        </div>
                         
                         {/* Country Input */}
-                        <div className="mb-4">
-                            <label className="block text-xs text-orange-700 font-medium mb-1 text-left">
+                        <div className="p-4">
+                            <label className="block text-xs text-gray-600 font-medium mb-2">
                                 Wo hast du diesen Vogel entdeckt?
                             </label>
                             <input
@@ -594,24 +629,25 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                                 value={vacationCountry}
                                 onChange={(e) => setVacationCountry(e.target.value)}
                                 placeholder="z.B. Botswana, Thailand, Spanien..."
-                                className="w-full px-3 py-2 rounded-lg border border-orange-200 bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white"
                             />
                         </div>
                         
-                        <div className="space-y-2">
+                        {/* Actions */}
+                        <div className="px-4 pb-4 space-y-2">
                             <button 
                                 onClick={handleAddVacationBird}
                                 disabled={loadingPreview || !vacationCountry.trim()}
-                                className="w-full px-4 py-3 bg-orange text-white font-bold rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                {loadingPreview ? <Loader2 className="animate-spin" size={18} /> : <Globe size={18} />}
-                                Zur Sammlung hinzufügen
+                                {loadingPreview ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                                Bestätigen & hinzufügen
                             </button>
                             <button 
                                 onClick={() => { setDetectedVacationBird(null); setSelectedImage(null); setVacationCountry(''); }} 
-                                className="w-full px-4 py-2 bg-orange-100 text-orange-700 font-bold rounded-lg hover:bg-orange-200 text-sm"
+                                className="w-full px-4 py-2.5 text-gray-500 font-medium rounded-xl hover:bg-gray-100 text-sm transition-colors"
                             >
-                                Neues Foto
+                                Abbrechen
                             </button>
                         </div>
                     </div>
