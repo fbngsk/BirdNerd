@@ -33,8 +33,15 @@ const CACHE_KEYS = {
     COLLECTED_IDS: 'birbz_collectedIds',
     XP: 'birbz_xp',
     VACATION_BIRDS: 'birbz_vacationBirds',
-    KNOWN_LOCATIONS: 'birbz_knownLocations'
+    KNOWN_LOCATIONS: 'birbz_knownLocations',
+    PENDING_SYNC: 'birbz_pendingSync'
 };
+
+interface PendingSyncItem {
+    type: 'bird_collected' | 'vacation_bird' | 'bird_log';
+    data: any;
+    timestamp: number;
+}
 
 const saveToCache = (key: string, data: any) => {
     try {
@@ -57,6 +64,20 @@ const clearCache = () => {
     Object.values(CACHE_KEYS).forEach(key => {
         localStorage.removeItem(key);
     });
+};
+
+const addToSyncQueue = (item: PendingSyncItem) => {
+    const queue = loadFromCache<PendingSyncItem[]>(CACHE_KEYS.PENDING_SYNC, []);
+    queue.push(item);
+    saveToCache(CACHE_KEYS.PENDING_SYNC, queue);
+};
+
+const getSyncQueue = (): PendingSyncItem[] => {
+    return loadFromCache<PendingSyncItem[]>(CACHE_KEYS.PENDING_SYNC, []);
+};
+
+const clearSyncQueue = () => {
+    localStorage.removeItem(CACHE_KEYS.PENDING_SYNC);
 };
 // ========================================
 
@@ -84,16 +105,80 @@ export default function App() {
     
     const [dailySightings, setDailySightings] = useState<Record<string, number>>({});
     const [lastSightingDate, setLastSightingDate] = useState<string>('');
+    const [hasPendingSync, setHasPendingSync] = useState(false);
     
     const audioContextRef = useRef<AudioContext | null>(null);
     
+    // Process sync queue when coming back online
+    const processSyncQueue = async () => {
+        if (!navigator.onLine) return;
+        if (isGuestRef.current) return;
+        
+        const queue = getSyncQueue();
+        if (queue.length === 0) return;
+        
+        console.log('[Birbz] Processing sync queue:', queue.length, 'items');
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        let hasErrors = false;
+        
+        for (const item of queue) {
+            try {
+                switch (item.type) {
+                    case 'bird_collected':
+                        await supabase.from('profiles').update({
+                            xp: item.data.xp,
+                            collected_ids: item.data.collected_ids,
+                            badges: item.data.badges,
+                            current_streak: item.data.current_streak,
+                            longest_streak: item.data.longest_streak,
+                            last_log_date: item.data.last_log_date
+                        }).eq('id', user.id);
+                        break;
+                        
+                    case 'vacation_bird':
+                        await supabase.from('vacation_birds').upsert(item.data);
+                        break;
+                        
+                    case 'bird_log':
+                        await supabase.from('bird_logs').insert(item.data);
+                        break;
+                }
+            } catch (error) {
+                console.error('[Birbz] Sync error:', error);
+                hasErrors = true;
+            }
+        }
+        
+        if (!hasErrors) {
+            clearSyncQueue();
+            setHasPendingSync(false);
+            console.log('[Birbz] Sync complete');
+        }
+    };
+    
     // Track online/offline status
     useEffect(() => {
-        const handleOnline = () => setIsOffline(false);
+        const handleOnline = () => {
+            setIsOffline(false);
+            // Process pending sync when back online
+            processSyncQueue();
+        };
         const handleOffline = () => setIsOffline(true);
         
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+        
+        // Check for pending items on mount
+        const queue = getSyncQueue();
+        if (queue.length > 0) {
+            setHasPendingSync(true);
+            if (navigator.onLine) {
+                processSyncQueue();
+            }
+        }
         
         return () => {
             window.removeEventListener('online', handleOnline);
@@ -489,19 +574,30 @@ export default function App() {
 
     const syncWithSupabase = async (profile: UserProfile, xp: number, ids: string[]) => {
         if (isGuestRef.current) return; 
-        if (!navigator.onLine) return; // Don't sync if offline
+        
+        const syncData = {
+            xp: xp,
+            collected_ids: ids,
+            badges: profile.badges,
+            current_streak: profile.currentStreak,
+            longest_streak: profile.longestStreak,
+            last_log_date: profile.lastLogDate
+        };
+        
+        // If offline, add to queue
+        if (!navigator.onLine) {
+            addToSyncQueue({
+                type: 'bird_collected',
+                data: syncData,
+                timestamp: Date.now()
+            });
+            setHasPendingSync(true);
+            return;
+        }
 
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            await supabase.from('profiles').update({
-                xp: xp,
-                collected_ids: ids,
-                badges: profile.badges,
-                current_streak: profile.currentStreak,
-                longest_streak: profile.longestStreak,
-                last_log_date: profile.lastLogDate,
-                friends: profile.friends
-            }).eq('id', user.id);
+            await supabase.from('profiles').update(syncData).eq('id', user.id);
         }
     };
 
@@ -551,24 +647,35 @@ export default function App() {
                 setKnownLocations(prev => new Set([...prev, locationKey]));
             }
             
-            if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
-                supabase.from('bird_logs').insert({
+            if (!isGuestRef.current && userProfile?.id) {
+                const logData = {
                     user_id: userProfile.id,
                     bird_id: bird.id,
                     bird_name: bird.name,
                     lat: userLocation.lat,
                     lng: userLocation.lng
-                }).then(({ error }) => {
-                    if (error) console.error('Error saving bird log:', error);
-                });
+                };
+                
+                if (navigator.onLine) {
+                    supabase.from('bird_logs').insert(logData).then(({ error }) => {
+                        if (error) console.error('Error saving bird log:', error);
+                    });
+                } else {
+                    addToSyncQueue({
+                        type: 'bird_log',
+                        data: logData,
+                        timestamp: Date.now()
+                    });
+                    setHasPendingSync(true);
+                }
             }
         }
         
         if (bird.id.startsWith('vacation_') && isNewSpecies) {
             setVacationBirds(prev => [...prev, bird]);
             
-            if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
-                supabase.from('vacation_birds').insert({
+            if (!isGuestRef.current && userProfile?.id) {
+                const vacationData = {
                     id: bird.id,
                     user_id: userProfile.id,
                     name: bird.name,
@@ -579,9 +686,20 @@ export default function App() {
                     real_desc: bird.realDesc,
                     seen_at: bird.seenAt,
                     country: bird.country
-                }).then(({ error }) => {
-                    if (error) console.error('Error saving vacation bird:', error);
-                });
+                };
+                
+                if (navigator.onLine) {
+                    supabase.from('vacation_birds').insert(vacationData).then(({ error }) => {
+                        if (error) console.error('Error saving vacation bird:', error);
+                    });
+                } else {
+                    addToSyncQueue({
+                        type: 'vacation_bird',
+                        data: vacationData,
+                        timestamp: Date.now()
+                    });
+                    setHasPendingSync(true);
+                }
             }
         }
 
@@ -743,10 +861,15 @@ export default function App() {
 
     return (
         <div className={`min-h-screen min-h-[-webkit-fill-available] font-sans pb-safe relative transition-colors duration-500 ${isVacationMode ? 'bg-orange-50' : 'bg-cream'}`}>
-            {/* Offline Indicator */}
+            {/* Offline / Sync Indicator */}
             {isOffline && (
                 <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-1 text-sm z-50">
-                    📡 Offline – Daten werden lokal angezeigt
+                    📡 Offline – Änderungen werden später synchronisiert
+                </div>
+            )}
+            {!isOffline && hasPendingSync && (
+                <div className="fixed top-0 left-0 right-0 bg-teal text-white text-center py-1 text-sm z-50">
+                    🔄 Synchronisiere...
                 </div>
             )}
             
@@ -865,7 +988,7 @@ export default function App() {
                 onAvatarClick={() => setShowProfile(true)}
             />
 
-            <main className={`pb-32 overflow-y-auto ${isOffline ? 'pt-6' : ''}`}>
+            <main className={`pb-32 overflow-y-auto ${isOffline || hasPendingSync ? 'pt-6' : ''}`}>
                 {renderContent()}
             </main>
 
