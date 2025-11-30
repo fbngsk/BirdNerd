@@ -20,12 +20,7 @@ import { BADGES_DB, BIRDS_DB, BIRD_FAMILIES, LEVEL_THRESHOLDS, XP_CONFIG, calcul
 import { getLegendaryArtwork } from './legendaryArtworks';
 import { supabase } from './lib/supabaseClient';
 
-// ========================================
-// FEATURE FLAG: Legendary Cards
-// Set to false to disable legendary card popups
-// ========================================
 const ENABLE_LEGENDARY_CARDS = true;
-// ========================================
 
 export default function App() {
     const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -36,34 +31,27 @@ export default function App() {
     const [showIdentification, setShowIdentification] = useState(false);
     const [celebration, setCelebration] = useState<{ active: boolean; xp: number; bonus?: number }>({ active: false, xp: 0 });
     
-    // Badge, Streak & Profile State
     const [newBadge, setNewBadge] = useState<Badge | null>(null);
     const [newStreak, setNewStreak] = useState<number | null>(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     
-    // Legendary Card State
     const [legendaryCardBird, setLegendaryCardBird] = useState<Bird | null>(null);
     
-    // User & Mode State
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isVacationMode, setIsVacationMode] = useState(false);
     const [appLoading, setAppLoading] = useState(true);
     const isGuestRef = useRef(false);
     
-    // Daily sightings tracker for XP caps (resets each day)
     const [dailySightings, setDailySightings] = useState<Record<string, number>>({});
     const [lastSightingDate, setLastSightingDate] = useState<string>('');
     
-    // Audio context for sounds
     const audioContextRef = useRef<AudioContext | null>(null);
     
-    // Scroll to top when tab changes
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [activeTab]);
     
-    // Play pling sound using Web Audio API
     const playPling = () => {
         try {
             if (!audioContextRef.current) {
@@ -87,16 +75,13 @@ export default function App() {
             oscillator.start(ctx.currentTime);
             oscillator.stop(ctx.currentTime + 0.3);
         } catch (e) {
-            // Audio not supported, fail silently
         }
     };
     
-    // Location State
     const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
     const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'pending'>('pending');
     const [knownLocations, setKnownLocations] = useState<Set<string>>(new Set());
 
-    // Request location permission on mount
     useEffect(() => {
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
@@ -114,91 +99,103 @@ export default function App() {
         }
     }, []);
 
-    // Helper: Create location key for deduplication
     const getLocationKey = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
 
     // ============================================
-    // FIXED: Load Session & Profile on Start
+    // Load Session & Profile on Start
     // ============================================
     useEffect(() => {
-        // Define loadUserProfile OUTSIDE of loadSession so onAuthStateChange can access it
         const loadUserProfile = async (userId: string) => {
-            console.log('[Birbz] Loading profile for:', userId);
-            
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
-            if (error) {
-                console.error('[Birbz] Profile fetch error:', error);
-                return;
-            }
-
-            if (profile) {
-                setUserProfile({
-                    id: userId,
-                    name: profile.name,
-                    avatarSeed: profile.avatar_seed,
-                    homeRegion: profile.home_region,
-                    badges: profile.badges || [],
-                    friends: profile.friends || [],
-                    currentStreak: profile.current_streak || 0,
-                    longestStreak: profile.longest_streak || 0,
-                    lastLogDate: profile.last_log_date || ''
-                });
-                
-                setCollectedIds(profile.collected_ids || []);
-                setXp(profile.xp || 0);
-                
-                // Load vacation birds
-                const { data: vacationData } = await supabase
-                    .from('vacation_birds')
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
                     .select('*')
-                    .eq('user_id', userId);
-                
-                if (vacationData && vacationData.length > 0) {
-                    const loadedVacationBirds: Bird[] = vacationData.map(vb => ({
-                        id: vb.id,
-                        name: vb.name,
-                        sciName: vb.sci_name,
-                        rarity: vb.rarity || 'Urlaubsfund',
-                        points: vb.points || 25,
-                        locationType: 'vacation' as const,
-                        country: vb.country,
-                        realImg: vb.real_img,
-                        realDesc: vb.real_desc,
-                        seenAt: vb.seen_at
-                    }));
-                    setVacationBirds(loadedVacationBirds);
+                    .eq('id', userId)
+                    .single();
+
+                if (error) {
+                    console.error('[Birbz] Profile fetch error:', error);
+                    return;
                 }
-                
-                // Load known locations
-                const { data: logsData } = await supabase
-                    .from('bird_logs')
-                    .select('lat, lng')
-                    .eq('user_id', userId);
-                
-                if (logsData && logsData.length > 0) {
-                    const locations = new Set<string>();
-                    logsData.forEach(log => {
-                        if (log.lat && log.lng) {
-                            locations.add(`${log.lat},${log.lng}`);
-                        }
+
+                if (profile) {
+                    setUserProfile({
+                        id: userId,
+                        name: profile.name,
+                        avatarSeed: profile.avatar_seed,
+                        homeRegion: profile.home_region,
+                        badges: profile.badges || [],
+                        friends: profile.friends || [],
+                        currentStreak: profile.current_streak || 0,
+                        longestStreak: profile.longest_streak || 0,
+                        lastLogDate: profile.last_log_date || ''
                     });
-                    setKnownLocations(locations);
+                    
+                    setCollectedIds(profile.collected_ids || []);
+                    setXp(profile.xp || 0);
+                    
+                    // Load vacation birds (non-blocking)
+                    supabase
+                        .from('vacation_birds')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .then(({ data: vacationData }) => {
+                            if (vacationData && vacationData.length > 0) {
+                                const loadedVacationBirds: Bird[] = vacationData.map(vb => ({
+                                    id: vb.id,
+                                    name: vb.name,
+                                    sciName: vb.sci_name,
+                                    rarity: vb.rarity || 'Urlaubsfund',
+                                    points: vb.points || 25,
+                                    locationType: 'vacation' as const,
+                                    country: vb.country,
+                                    realImg: vb.real_img,
+                                    realDesc: vb.real_desc,
+                                    seenAt: vb.seen_at
+                                }));
+                                setVacationBirds(loadedVacationBirds);
+                            }
+                        });
+                    
+                    // Load known locations (non-blocking)
+                    supabase
+                        .from('bird_logs')
+                        .select('lat, lng')
+                        .eq('user_id', userId)
+                        .then(({ data: logsData }) => {
+                            if (logsData && logsData.length > 0) {
+                                const locations = new Set<string>();
+                                logsData.forEach(log => {
+                                    if (log.lat && log.lng) {
+                                        locations.add(`${log.lat},${log.lng}`);
+                                    }
+                                });
+                                setKnownLocations(locations);
+                            }
+                        });
                 }
+            } catch (e) {
+                console.error('[Birbz] loadUserProfile error:', e);
             }
         };
 
         const loadSession = async () => {
             setAppLoading(true);
             
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session?.user) {
-                await loadUserProfile(session.user.id);
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('[Birbz] Session error:', error);
+                    setAppLoading(false);
+                    return;
+                }
+                
+                if (session?.user) {
+                    await loadUserProfile(session.user.id);
+                }
+            } catch (e) {
+                console.error('[Birbz] loadSession error:', e);
             }
             
             setAppLoading(false);
@@ -206,12 +203,8 @@ export default function App() {
 
         loadSession();
 
-        // Listen for auth changes - WICHTIG für PWA!
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[Birbz] Auth event:', event);
-            
             if (event === 'SIGNED_IN' && session?.user) {
-                // Neu eingeloggt - Profil laden!
                 setAppLoading(true);
                 await loadUserProfile(session.user.id);
                 setAppLoading(false);
@@ -291,7 +284,6 @@ export default function App() {
         let justIncreased = false;
 
         if (lastLog === today) {
-            // Already logged today
         } else {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
@@ -683,11 +675,6 @@ export default function App() {
                         sciName: legendaryCardBird.sciName,
                         image: (() => {
                             const artwork = getLegendaryArtwork(legendaryCardBird.id);
-                            console.log('Legendary card debug:', {
-                                birdId: legendaryCardBird.id,
-                                artwork,
-                                realImg: legendaryCardBird.realImg
-                            });
                             return artwork || legendaryCardBird.realImg || '';
                         })()
                     }}
