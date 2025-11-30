@@ -15,9 +15,87 @@ try {
   console.warn("Gemini API Key setup failed:", e);
 }
 
-const SYSTEM_PROMPT = "Du bist ein Experte für Ornithologie in Deutschland. Deine Aufgabe ist es, Vögel präzise zu identifizieren. Antworte AUSSCHLIESSLICH mit dem exakten deutschen Vogelnamen (z.B. 'Amsel', 'Kohlmeise', 'Buchfink'). Keine Sätze, keine Lateinischen Namen, keine Erklärungen.";
+// ============================================
+// IMPROVED PROMPTS
+// ============================================
 
-const GLOBAL_BIRD_PROMPT = "Du bist ein Experte für weltweite Ornithologie. Identifiziere den Vogel auf diesem Bild. Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt im Format: {\"name\": \"Deutscher Name\", \"sciName\": \"Wissenschaftlicher Name\"}. Beispiel: {\"name\": \"Sekretär\", \"sciName\": \"Sagittarius serpentarius\"}. Wenn kein Vogel erkennbar ist, antworte mit {\"name\": \"Unbekannt\", \"sciName\": \"\"}. Kein Markdown, kein Text davor oder danach.";
+const BIRD_ID_PROMPT = `Du bist ein erfahrener Ornithologe, spezialisiert auf europäische Vögel.
+
+AUFGABE: Analysiere das Bild und identifiziere den Vogel.
+
+WICHTIG - Bildqualität beachten:
+- Ist der Vogel scharf zu erkennen?
+- Sind wichtige Merkmale sichtbar (Schnabel, Gefieder, Größe)?
+- Gibt es Gegenlicht oder Verdeckungen?
+
+ANALYSE-SCHRITTE:
+1. Größe einschätzen (klein wie Spatz, mittel wie Amsel, groß wie Krähe)
+2. Körperform und Silhouette
+3. Schnabelform (dünn/dick, lang/kurz, gebogen/gerade)
+4. Gefiederfarben und Muster
+5. Besondere Merkmale (Haube, Augenring, Schwanzform)
+6. Lebensraum im Bild (Wald, Wasser, Stadt, Feld)
+
+ANTWORT-FORMAT (NUR JSON, kein Markdown):
+{
+  "identified": true/false,
+  "name": "Deutscher Vogelname",
+  "sciName": "Wissenschaftlicher Name",
+  "confidence": "high" | "medium" | "low",
+  "reasoning": "Kurze Begründung der Merkmale",
+  "alternatives": [
+    {"name": "Alternative 1", "sciName": "...", "reason": "Warum möglich"}
+  ],
+  "imageQuality": "good" | "acceptable" | "poor",
+  "qualityIssues": ["Liste der Probleme falls vorhanden"]
+}
+
+CONFIDENCE-REGELN:
+- "high": Klare Sicht, eindeutige Merkmale, >90% sicher
+- "medium": Erkennbar aber nicht perfekt, 60-90% sicher
+- "low": Schwer erkennbar, mehrere Arten möglich, <60% sicher
+
+Wenn KEIN Vogel im Bild: {"identified": false, "reason": "Beschreibung was zu sehen ist"}`;
+
+const GLOBAL_BIRD_PROMPT = `Du bist ein Experte für weltweite Ornithologie.
+
+AUFGABE: Identifiziere den Vogel auf diesem Bild. Der Vogel kann aus jedem Land der Welt stammen.
+
+ANTWORT-FORMAT (NUR JSON, kein Markdown):
+{
+  "identified": true/false,
+  "name": "Deutscher Name (falls bekannt, sonst englischer Name)",
+  "sciName": "Wissenschaftlicher Name",
+  "confidence": "high" | "medium" | "low",
+  "reasoning": "Kurze Begründung",
+  "alternatives": [
+    {"name": "Alternative", "sciName": "...", "reason": "Warum möglich"}
+  ],
+  "region": "Typisches Verbreitungsgebiet"
+}
+
+Wenn KEIN Vogel erkennbar: {"identified": false, "reason": "..."}`;
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface BirdIdentificationResult {
+  identified: boolean;
+  name?: string;
+  sciName?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  reasoning?: string;
+  alternatives?: Array<{name: string; sciName: string; reason: string}>;
+  imageQuality?: 'good' | 'acceptable' | 'poor';
+  qualityIssues?: string[];
+  reason?: string; // For "not identified" cases
+  region?: string; // For global birds
+}
+
+// ============================================
+// FUNCTIONS
+// ============================================
 
 export const lookupBirdByName = async (birdName: string): Promise<VacationBirdResult | null> => {
     if (!ai) return null;
@@ -27,10 +105,10 @@ export const lookupBirdByName = async (birdName: string): Promise<VacationBirdRe
             model: 'gemini-2.5-flash',
             contents: `Der Nutzer sucht nach einem Vogel namens "${birdName}". 
             
-Falls dieser Vogelname existiert (egal ob deutscher oder englischer Name), antworte mit einem JSON-Objekt:
-{"name": "Korrekter deutscher Name", "sciName": "Wissenschaftlicher Name"}
+Falls dieser Vogelname existiert (egal ob deutscher, englischer oder wissenschaftlicher Name), antworte mit einem JSON-Objekt:
+{"name": "Korrekter deutscher Name (falls bekannt, sonst englisch)", "sciName": "Wissenschaftlicher Name"}
 
-Falls der Name kein echter Vogelname ist, antworte mit:
+Falls der Name kein echter Vogelname ist oder du ihn nicht kennst, antworte mit:
 {"name": "Unbekannt", "sciName": ""}
 
 Antworte NUR mit dem JSON-Objekt, kein Markdown, kein Text davor oder danach.`
@@ -60,7 +138,11 @@ export const identifyBirdFromDescription = async (description: string): Promise<
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Identifiziere den Vogel basierend auf dieser Beschreibung: "${description}". ${SYSTEM_PROMPT}. Wenn du dir nicht sicher bist, antworte mit 'Unbekannt'.`
+            contents: `Identifiziere den Vogel basierend auf dieser Beschreibung: "${description}". 
+            
+Du bist ein Experte für Ornithologie in Deutschland. Antworte AUSSCHLIESSLICH mit dem exakten deutschen Vogelnamen (z.B. 'Amsel', 'Kohlmeise', 'Buchfink'). Keine Sätze, keine Lateinischen Namen, keine Erklärungen.
+
+Wenn du dir nicht sicher bist, antworte mit 'Unbekannt'.`
         });
         return response.text?.trim() || "Unbekannt";
     } catch (error) {
@@ -68,6 +150,9 @@ export const identifyBirdFromDescription = async (description: string): Promise<
     }
 };
 
+/**
+ * Improved bird identification with confidence scoring
+ */
 export const identifyBirdFromImage = async (base64Image: string): Promise<string | null> => {
     if (!ai) {
         console.warn("No AI instance found");
@@ -75,7 +160,6 @@ export const identifyBirdFromImage = async (base64Image: string): Promise<string
     }
 
     try {
-        // Clean base64 string if it contains header
         const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
         const response = await ai.models.generateContent({
@@ -83,7 +167,7 @@ export const identifyBirdFromImage = async (base64Image: string): Promise<string
             contents: {
                 role: 'user',
                 parts: [
-                    { text: "Welcher Vogel ist auf diesem Bild zu sehen? " + SYSTEM_PROMPT + " Wenn du dir nicht sicher bist oder kein Vogel zu erkennen ist, antworte mit 'Unbekannt'." },
+                    { text: BIRD_ID_PROMPT },
                     { 
                         inlineData: { 
                             mimeType: 'image/jpeg', 
@@ -94,17 +178,89 @@ export const identifyBirdFromImage = async (base64Image: string): Promise<string
             }
         });
 
-        const result = response.text?.trim();
-        console.log("Gemini Image ID Result:", result);
+        const text = response.text?.trim();
+        console.log("Gemini Image ID Raw:", text);
 
-        if (!result || result.toLowerCase().includes('unbekannt')) return null;
+        if (!text) return null;
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         
-        // Clean up potential formatting issues (e.g. "Das ist eine Amsel" -> "Amsel")
-        return result.replace(/\.$/, ''); 
+        try {
+            const result: BirdIdentificationResult = JSON.parse(jsonStr);
+            console.log("Gemini Parsed Result:", result);
+            
+            if (!result.identified || !result.name) return null;
+            
+            // Store full result for later use
+            lastIdentificationResult = result;
+            
+            return result.name;
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError);
+            // Fallback: try to extract name directly
+            const nameMatch = text.match(/"name"\s*:\s*"([^"]+)"/);
+            if (nameMatch) return nameMatch[1];
+            return null;
+        }
     } catch (error) {
         console.error("Image Analysis Failed:", error);
         return null;
     }
+};
+
+/**
+ * Get full identification result with confidence and alternatives
+ */
+export const identifyBirdFromImageFull = async (base64Image: string): Promise<BirdIdentificationResult | null> => {
+    if (!ai) {
+        console.warn("No AI instance found");
+        return null;
+    }
+
+    try {
+        const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+                role: 'user',
+                parts: [
+                    { text: BIRD_ID_PROMPT },
+                    { 
+                        inlineData: { 
+                            mimeType: 'image/jpeg', 
+                            data: cleanBase64 
+                        } 
+                    }
+                ]
+            }
+        });
+
+        const text = response.text?.trim();
+        console.log("Gemini Full ID Raw:", text);
+
+        if (!text) return null;
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        try {
+            const result: BirdIdentificationResult = JSON.parse(jsonStr);
+            return result;
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError);
+            return null;
+        }
+    } catch (error) {
+        console.error("Image Analysis Failed:", error);
+        return null;
+    }
+};
+
+// Store last result for reference
+let lastIdentificationResult: BirdIdentificationResult | null = null;
+
+export const getLastIdentificationResult = (): BirdIdentificationResult | null => {
+    return lastIdentificationResult;
 };
 
 export const identifyBirdFromAudio = async (base64Audio: string): Promise<IdentificationResult[]> => {
@@ -114,7 +270,6 @@ export const identifyBirdFromAudio = async (base64Audio: string): Promise<Identi
     }
 
     try {
-        // Clean base64 string if it contains header
         const cleanBase64 = base64Audio.includes(',') ? base64Audio.split(',')[1] : base64Audio;
 
         const response = await ai.models.generateContent({
@@ -124,13 +279,13 @@ export const identifyBirdFromAudio = async (base64Audio: string): Promise<Identi
                 parts: [
                     { text: `Analysiere diese Audioaufnahme auf Vogelstimmen. Es könnten mehrere Vögel gleichzeitig singen.
                     
-                    Antworte AUSSCHLIESSLICH mit einem validen JSON-Array. 
-                    Format: [{"name": "Deutscher Vogelname", "confidence": "hoch" | "mittel" | "niedrig"}]
-                    
-                    Beispiel: [{"name": "Amsel", "confidence": "hoch"}, {"name": "Kohlmeise", "confidence": "mittel"}]
-                    
-                    Wenn KEIN Vogel zu hören ist, antworte mit einem leeren Array: [].
-                    Kein Markdown, kein Text davor oder danach.` 
+Antworte AUSSCHLIESSLICH mit einem validen JSON-Array. 
+Format: [{"name": "Deutscher Vogelname", "confidence": "hoch" | "mittel" | "niedrig"}]
+
+Beispiel: [{"name": "Amsel", "confidence": "hoch"}, {"name": "Kohlmeise", "confidence": "mittel"}]
+
+Wenn KEIN Vogel zu hören ist, antworte mit einem leeren Array: [].
+Kein Markdown, kein Text davor oder danach.` 
                     },
                     { 
                         inlineData: { 
@@ -147,7 +302,6 @@ export const identifyBirdFromAudio = async (base64Audio: string): Promise<Identi
         
         if (!text) return [];
 
-        // Remove Markdown code blocks if present
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         
         try {
@@ -197,11 +351,62 @@ export const identifyBirdGlobal = async (base64Image: string): Promise<VacationB
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         
         try {
-            const result: VacationBirdResult = JSON.parse(jsonStr);
-            if (result.name === 'Unbekannt' || !result.name) return null;
-            return result;
+            const result: BirdIdentificationResult = JSON.parse(jsonStr);
+            if (!result.identified || result.name === 'Unbekannt' || !result.name) return null;
+            
+            // Store for later
+            lastIdentificationResult = result;
+            
+            return {
+                name: result.name,
+                sciName: result.sciName || ''
+            };
         } catch (parseError) {
             console.error("JSON Parse Error:", parseError);
+            return null;
+        }
+    } catch (error) {
+        console.error("Global Bird Analysis Failed:", error);
+        return null;
+    }
+};
+
+/**
+ * Full global identification with confidence
+ */
+export const identifyBirdGlobalFull = async (base64Image: string): Promise<BirdIdentificationResult | null> => {
+    if (!ai) {
+        console.warn("No AI instance found");
+        return null;
+    }
+
+    try {
+        const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+                role: 'user',
+                parts: [
+                    { text: GLOBAL_BIRD_PROMPT },
+                    { 
+                        inlineData: { 
+                            mimeType: 'image/jpeg', 
+                            data: cleanBase64 
+                        } 
+                    }
+                ]
+            }
+        });
+
+        const text = response.text?.trim();
+        if (!text) return null;
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        try {
+            return JSON.parse(jsonStr);
+        } catch {
             return null;
         }
     } catch (error) {
