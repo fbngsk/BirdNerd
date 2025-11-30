@@ -432,15 +432,24 @@ export default function App() {
 
         loadSession();
 
+        // Track if this is the initial load to prevent reload loops
+        let isInitialLoad = true;
+        
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
+            console.log('[Birbz] Auth state change:', event, 'initial:', isInitialLoad);
+            
+            // Only reload on actual sign-in events, not initial session restoration
+            if (event === 'SIGNED_IN' && session?.user && !isInitialLoad) {
                 window.location.reload();
-            } else if (!session && !isGuestRef.current) {
+            } else if (event === 'SIGNED_OUT' && !isGuestRef.current) {
                 setUserProfile(null);
                 setCollectedIds([]);
                 setXp(0);
                 clearCache();
             }
+            
+            // After first event, no longer initial
+            isInitialLoad = false;
         });
 
         return () => subscription.unsubscribe();
