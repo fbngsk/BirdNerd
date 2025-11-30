@@ -1,111 +1,86 @@
-// Birbz Service Worker v1.0.0
-// Cache-first mit automatischer Aktualisierung
-
+// Birbz Service Worker - Offline Support
 const CACHE_NAME = 'birbz-v1';
-const STATIC_CACHE = 'birbz-static-v1';
 
-// Assets die gecached werden sollen (App Shell)
+// Assets to cache on install
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png'
 ];
 
-// Install: Cache App Shell
+// Install: Cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        // Sofort aktivieren, nicht auf alte Tabs warten
-        return self.skipWaiting();
-      })
-  );
-});
-
-// Activate: Alte Caches löschen
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME && name !== STATIC_CACHE)
-          .map((name) => {
-            console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
-          })
-      );
-    }).then(() => {
-      // Sofort alle Clients übernehmen
-      return self.clients.claim();
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS);
     })
   );
+  self.skipWaiting();
 });
 
-// Fetch: Network-first für API, Cache-first für Assets
+// Activate: Clean old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch: Network-first for API, Cache-first for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // API-Requests (Supabase, Gemini) - immer Network
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // API requests (Supabase, Gemini) - Network only, don't cache
   if (url.hostname.includes('supabase') || 
       url.hostname.includes('googleapis') ||
       url.hostname.includes('generativelanguage')) {
-    event.respondWith(fetch(event.request));
     return;
   }
-
-  // Navigation requests - Network first, fallback to cache
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Erfolgreiche Response cachen
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          // Offline: aus Cache laden
-          return caches.match(event.request)
-            .then((response) => response || caches.match('/'));
-        })
-    );
-    return;
-  }
-
-  // Static assets (JS, CSS, Images) - Stale-while-revalidate
+  
+  // For everything else: Cache-first, fallback to network
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Update cache mit neuer Version
-        if (networkResponse.ok) {
-          const responseClone = networkResponse.clone();
+    caches.match(event.request).then((cached) => {
+      if (cached) {
+        // Return cache, but also update in background
+        event.waitUntil(
+          fetch(event.request).then((response) => {
+            if (response.ok) {
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, response);
+              });
+            }
+          }).catch(() => {})
+        );
+        return cached;
+      }
+      
+      // Not in cache - fetch and cache
+      return fetch(event.request).then((response) => {
+        if (response.ok && response.type === 'basic') {
+          const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, clone);
           });
         }
-        return networkResponse;
+        return response;
       }).catch(() => {
-        // Network failed, return cached or nothing
-        return cachedResponse;
+        // Offline and not in cache - return offline page for navigation
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
       });
-
-      // Return cached version immediately, update in background
-      return cachedResponse || fetchPromise;
     })
   );
-});
-
-// Message handler für Update-Check
-self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  }
 });
