@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Search, Mic, Camera, ArrowRight, Check, Puzzle, HelpCircle, ChevronLeft, Loader2, AlertTriangle, Upload, ExternalLink, Globe, Activity } from 'lucide-react';
+import { X, Search, Mic, Camera, ArrowRight, Check, Puzzle, HelpCircle, ChevronLeft, Loader2, AlertTriangle, Upload, ExternalLink, Globe, Activity, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Bird, WikiResult, LocationType, IdentificationResult, VacationBirdResult } from '../types';
 import { BIRDS_DB, WIZARD_SIZES, WIZARD_COLORS } from '../constants';
 import { fetchWikiData } from '../services/birdService';
-import { identifyBirdFromImage, identifyBirdGlobal, lookupBirdByName } from '../services/geminiService';
+import { identifyBirdFromImageFull, identifyBirdGlobalFull, lookupBirdByName, BirdIdentificationResult } from '../services/geminiService';
 
 interface IdentificationModalProps {
     onClose: () => void;
     onFound: (bird: Bird) => void;
-    modeType: LocationType; // 'local' or 'vacation'
+    modeType: LocationType;
     onToggleMode?: () => void;
 }
 
@@ -34,7 +34,10 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
     
-    // Vacation Bird State (for birds not in local DB)
+    // NEW: Full identification result with confidence
+    const [identificationResult, setIdentificationResult] = useState<BirdIdentificationResult | null>(null);
+    
+    // Vacation Bird State
     const [detectedVacationBird, setDetectedVacationBird] = useState<VacationBirdResult | null>(null);
     const [vacationCountry, setVacationCountry] = useState('');
 
@@ -47,7 +50,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     // Load wizard bird images when on step 2
     useEffect(() => {
         if (mode === 'wizard' && wizardStep === 2) {
-            // Get filtered birds based on current filters
             const allBirds = BIRDS_DB.filter(b => (b.locationType || 'local') === modeType);
             
             const sizeGroups: Record<string, string[]> = {
@@ -80,7 +82,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                 filtered = filtered.filter(b => keywords.some(kw => b.name.toLowerCase().includes(kw.toLowerCase())));
             }
             
-            // Load images for first 20 birds
             const loadImages = async () => {
                 for (const bird of filtered.slice(0, 20)) {
                     if (!wizardBirdImages[bird.id]) {
@@ -112,7 +113,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         }
     }, [searchTerm, modeType]);
     
-    // Vacation mode: search for exotic birds via AI
     const handleVacationSearch = async () => {
         if (!searchTerm.trim() || modeType !== 'vacation') return;
         
@@ -128,7 +128,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         setSearchingVacation(false);
     };
 
-    // Load Wiki Data when previewing a bird
     useEffect(() => {
         if (previewBird) {
             setLoadingPreview(true);
@@ -152,7 +151,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         }
     };
 
-    // --- PHOTO ID LOGIC ---
+    // --- PHOTO ID LOGIC (IMPROVED) ---
     const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -160,38 +159,41 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         setPhotoError(null);
         setAnalyzing(true);
         setDetectedVacationBird(null);
+        setIdentificationResult(null);
 
         const reader = new FileReader();
         reader.onloadend = async () => {
             const base64String = reader.result as string;
             setSelectedImage(base64String);
             
-            // Call Gemini Vision
-            const identifiedName = await identifyBirdFromImage(base64String);
+            // Use the new full identification
+            const result = await identifyBirdFromImageFull(base64String);
             setAnalyzing(false);
+            
+            console.log("Full ID Result:", result);
 
-            if (identifiedName) {
-                // Fuzzy match logic against local DB
+            if (result && result.identified && result.name) {
+                setIdentificationResult(result);
+                
+                // Try to find in local DB
                 const foundBird = BIRDS_DB.find(b => 
-                    b.name.toLowerCase() === identifiedName.toLowerCase() ||
-                    b.name.toLowerCase().includes(identifiedName.toLowerCase()) ||
-                    identifiedName.toLowerCase().includes(b.name.toLowerCase())
+                    b.name.toLowerCase() === result.name!.toLowerCase() ||
+                    b.name.toLowerCase().includes(result.name!.toLowerCase()) ||
+                    result.name!.toLowerCase().includes(b.name.toLowerCase()) ||
+                    (result.sciName && b.sciName.toLowerCase() === result.sciName.toLowerCase())
                 );
 
                 if (foundBird) {
                     setPreviewBird(foundBird);
                 } else {
-                    // Bird not in local DB - get full info for vacation mode
-                    setAnalyzing(true);
-                    const globalResult = await identifyBirdGlobal(base64String);
-                    setAnalyzing(false);
-                    
-                    if (globalResult) {
-                        setDetectedVacationBird(globalResult);
-                    } else {
-                        setPhotoError(`Die KI hat einen "${identifiedName}" erkannt, konnte aber keine weiteren Infos finden.`);
-                    }
+                    // Not in local DB - treat as vacation/global bird
+                    setDetectedVacationBird({
+                        name: result.name,
+                        sciName: result.sciName || ''
+                    });
                 }
+            } else if (result && !result.identified) {
+                setPhotoError(result.reason || "Konnte keinen Vogel auf dem Bild erkennen.");
             } else {
                 setPhotoError("Konnte den Vogel auf dem Bild nicht erkennen. Versuche eine nähere Aufnahme.");
             }
@@ -203,12 +205,29 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         fileInputRef.current?.click();
     };
 
-    // Handle adding a vacation bird (not in local DB)
+    const handleSelectAlternative = async (alt: {name: string; sciName: string}) => {
+        // Check if alternative is in local DB
+        const foundBird = BIRDS_DB.find(b => 
+            b.name.toLowerCase() === alt.name.toLowerCase() ||
+            (alt.sciName && b.sciName.toLowerCase() === alt.sciName.toLowerCase())
+        );
+        
+        if (foundBird) {
+            setPreviewBird(foundBird);
+            setIdentificationResult(null);
+        } else {
+            setDetectedVacationBird({
+                name: alt.name,
+                sciName: alt.sciName
+            });
+            setIdentificationResult(null);
+        }
+    };
+
     const handleAddVacationBird = async () => {
         if (!detectedVacationBird || !vacationCountry.trim()) return;
         
         setLoadingPreview(true);
-        // Pass scientific name as second argument for better Wikipedia disambiguation
         const wikiData = await fetchWikiData(detectedVacationBird.name, detectedVacationBird.sciName);
         setLoadingPreview(false);
         
@@ -217,7 +236,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             name: detectedVacationBird.name,
             sciName: detectedVacationBird.sciName,
             rarity: 'Urlaubsfund',
-            points: 25, // Base XP for vacation birds
+            points: 25,
             locationType: 'vacation',
             country: vacationCountry.trim(),
             realImg: wikiData?.img || selectedImage || undefined,
@@ -226,6 +245,32 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         };
         
         onFound(vacationBird);
+    };
+
+    // --- CONFIDENCE BADGE ---
+    const ConfidenceBadge = ({ confidence }: { confidence: 'high' | 'medium' | 'low' }) => {
+        const config = {
+            high: { label: 'Hohe Sicherheit', color: 'bg-green-100 text-green-700 border-green-200', icon: '✓' },
+            medium: { label: 'Mittlere Sicherheit', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: '?' },
+            low: { label: 'Niedrige Sicherheit', color: 'bg-red-100 text-red-700 border-red-200', icon: '!' }
+        };
+        const c = config[confidence];
+        return (
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${c.color}`}>
+                {c.icon} {c.label}
+            </span>
+        );
+    };
+
+    // --- IMAGE QUALITY BADGE ---
+    const ImageQualityBadge = ({ quality }: { quality: 'good' | 'acceptable' | 'poor' }) => {
+        const config = {
+            good: { label: 'Gute Bildqualität', color: 'text-green-600' },
+            acceptable: { label: 'Akzeptable Bildqualität', color: 'text-yellow-600' },
+            poor: { label: 'Schlechte Bildqualität', color: 'text-red-600' }
+        };
+        const c = config[quality];
+        return <span className={`text-xs ${c.color}`}>{c.label}</span>;
     };
 
     // --- RENDERERS ---
@@ -321,6 +366,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                 <div className="flex items-center mb-4">
                     <button onClick={() => {
                         setPreviewBird(null); 
+                        setIdentificationResult(null);
                         if(mode==='photo') setMode('menu');
                         setSelectedImage(null);
                     }} className="text-gray-400 hover:text-teal flex items-center gap-1">
@@ -331,7 +377,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                 <div className="flex-1 overflow-y-auto no-scrollbar">
                     <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-4">
                         <div className="h-56 bg-gray-100 relative flex items-center justify-center overflow-hidden">
-                            {/* Prioritize Uploaded Image for Preview if exists */}
                             {selectedImage ? (
                                 <>
                                     <div className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110" style={{ backgroundImage: `url(${selectedImage})` }}></div>
@@ -355,10 +400,25 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             <h3 className="text-2xl font-bold text-teal">{previewBird.name}</h3>
                             <p className="text-gray-400 italic font-serif">{previewBird.sciName}</p>
                             
+                            {/* Confidence Badge */}
+                            {identificationResult?.confidence && (
+                                <div className="mt-3">
+                                    <ConfidenceBadge confidence={identificationResult.confidence} />
+                                </div>
+                            )}
+                            
                             <div className="mt-4 flex gap-2 justify-center text-xs">
                                 <span className="px-2 py-1 bg-orange/10 text-orange rounded font-bold">+{previewBird.points} XP</span>
                                 <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded">{previewBird.rarity}</span>
                             </div>
+
+                            {/* Reasoning from AI */}
+                            {identificationResult?.reasoning && (
+                                <div className="mt-4 p-3 bg-teal/5 rounded-xl text-left">
+                                    <p className="text-xs text-gray-500 font-medium mb-1">KI-Begründung:</p>
+                                    <p className="text-sm text-gray-700">{identificationResult.reasoning}</p>
+                                </div>
+                            )}
 
                             <div className="mt-4 text-sm text-gray-500 line-clamp-3 text-left">
                                 {loadingPreview ? 'Lade Beschreibung...' : previewData?.desc}
@@ -366,7 +426,32 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         </div>
                     </div>
 
-                    {/* Verification / External Resources Section */}
+                    {/* Alternatives (if low/medium confidence) */}
+                    {identificationResult?.alternatives && identificationResult.alternatives.length > 0 && 
+                     identificationResult.confidence !== 'high' && (
+                        <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200 mb-4">
+                            <h4 className="text-xs font-bold text-yellow-800 uppercase mb-3 flex items-center gap-2">
+                                <AlertCircle size={14} /> Könnte auch sein:
+                            </h4>
+                            <div className="space-y-2">
+                                {identificationResult.alternatives.map((alt, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelectAlternative(alt)}
+                                        className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-yellow-200 hover:border-yellow-400 text-left transition-colors"
+                                    >
+                                        <div>
+                                            <p className="font-medium text-gray-800">{alt.name}</p>
+                                            <p className="text-xs text-gray-500">{alt.reason}</p>
+                                        </div>
+                                        <ChevronLeft size={16} className="text-gray-300 rotate-180" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verification Links */}
                     <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-4">
                         <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
                             <HelpCircle size={14} /> Nicht sicher? Zweite Meinung:
@@ -409,21 +494,18 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     const renderManual = () => {
         if (previewBird) return renderPreview();
         
-        // Show vacation bird confirmation if detected
         if (detectedVacationBird) {
             return (
                 <div className="animate-fade-in h-full flex flex-col items-center justify-center text-center relative">
-                    <button onClick={() => { setMode('menu'); setDetectedVacationBird(null); setVacationSearchResult(null); setVacationCountry(''); }} className="absolute top-0 left-0 text-gray-400 text-sm hover:text-teal">Zurück</button>
+                    <button onClick={() => { setMode('menu'); setDetectedVacationBird(null); setVacationSearchResult(null); setVacationCountry(''); setIdentificationResult(null); }} className="absolute top-0 left-0 text-gray-400 text-sm hover:text-teal">Zurück</button>
                     
                     <div className="bg-white rounded-2xl border border-orange-200 max-w-sm w-full shadow-lg overflow-hidden">
-                        {/* Header with bird info */}
                         <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-4 text-white text-center">
                             <Globe className="mx-auto mb-2" size={32} />
                             <h3 className="font-bold text-lg">{detectedVacationBird.name}</h3>
                             <p className="text-orange-100 text-sm italic">{detectedVacationBird.sciName}</p>
                         </div>
                         
-                        {/* Verify link */}
                         <div className="px-4 py-3 bg-orange-50 border-b border-orange-100">
                             <a 
                                 href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(detectedVacationBird.sciName + ' bird')}`}
@@ -437,7 +519,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             </a>
                         </div>
                         
-                        {/* Country Input */}
                         <div className="p-4">
                             <label className="block text-xs text-gray-600 font-medium mb-2">
                                 Wo hast du diesen Vogel entdeckt?
@@ -451,7 +532,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             />
                         </div>
                         
-                        {/* Actions */}
                         <div className="px-4 pb-4 space-y-2">
                             <button 
                                 onClick={handleAddVacationBird}
@@ -514,7 +594,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         </button>
                     ))}
                     
-                    {/* Vacation Mode: AI Search Button */}
                     {modeType === 'vacation' && searchTerm && searchResults.length === 0 && !vacationSearchResult && (
                         <div className="text-center py-6">
                             <p className="text-gray-400 text-sm mb-4">Nicht in der Datenbank gefunden.</p>
@@ -538,7 +617,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         </div>
                     )}
                     
-                    {/* Vacation Search Result */}
                     {vacationSearchResult && (
                         <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200 animate-fade-in">
                             <div className="flex items-center gap-3 mb-3">
@@ -620,9 +698,8 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
 
         return (
             <div className="animate-fade-in min-h-[70vh] flex flex-col items-center justify-center text-center relative pt-8">
-                 <button onClick={() => { setMode('menu'); setPhotoError(null); }} className="absolute top-0 left-0 text-gray-400 text-sm hover:text-teal">Zurück</button>
+                 <button onClick={() => { setMode('menu'); setPhotoError(null); setIdentificationResult(null); }} className="absolute top-0 left-0 text-gray-400 text-sm hover:text-teal">Zurück</button>
                  
-                 {/* Hidden File Input for Camera */}
                  <input 
                     type="file" 
                     accept="image/*" 
@@ -633,7 +710,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                     id="camera-input"
                  />
                  
-                 {/* Hidden File Input for Gallery (no capture attribute) */}
                  <input 
                     type="file" 
                     accept="image/*"
@@ -642,7 +718,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                     id="gallery-input"
                  />
 
-                 {!analyzing && !photoError && (
+                 {!analyzing && !photoError && !detectedVacationBird && (
                      <>
                         <div className="w-32 h-32 bg-purple-50 rounded-full flex items-center justify-center mb-8">
                             <button 
@@ -662,6 +738,16 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         >
                             <Upload size={14} /> Aus Galerie
                         </button>
+                        
+                        {/* Tips for better photos */}
+                        <div className="mt-8 p-4 bg-purple-50 rounded-xl max-w-xs">
+                            <p className="text-xs text-purple-800 font-medium mb-2">💡 Tipps für bessere Erkennung:</p>
+                            <ul className="text-xs text-purple-700 text-left space-y-1">
+                                <li>• Vogel sollte scharf und gut sichtbar sein</li>
+                                <li>• Nicht zu viel Gegenlicht</li>
+                                <li>• Je näher, desto besser</li>
+                            </ul>
+                        </div>
                      </>
                  )}
 
@@ -674,21 +760,48 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                              </div>
                         </div>
                         <div className="text-purple-600 font-bold">KI analysiert Bild...</div>
-                        <p className="text-xs text-gray-400">Ich schaue mir Schnabel und Gefieder an.</p>
+                        <p className="text-xs text-gray-400">Ich schaue mir Schnabel, Gefieder und Körperform an.</p>
                     </div>
                 )}
 
-                {/* Vacation Bird Detected - Not in local DB */}
+                {/* Vacation Bird Detected */}
                 {detectedVacationBird && !photoError && (
                     <div className="bg-white rounded-2xl border border-orange-200 max-w-sm w-full animate-fade-in shadow-lg overflow-hidden">
-                        {/* Header with bird info */}
                         <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-4 text-white text-center">
                             <Globe className="mx-auto mb-2" size={32} />
                             <h3 className="font-bold text-lg">{detectedVacationBird.name}</h3>
                             <p className="text-orange-100 text-sm italic">{detectedVacationBird.sciName}</p>
+                            {identificationResult?.confidence && (
+                                <div className="mt-2">
+                                    <ConfidenceBadge confidence={identificationResult.confidence} />
+                                </div>
+                            )}
                         </div>
                         
-                        {/* Verify link */}
+                        {identificationResult?.reasoning && (
+                            <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 text-left">
+                                <p className="text-xs text-orange-800">{identificationResult.reasoning}</p>
+                            </div>
+                        )}
+                        
+                        {/* Alternatives for vacation birds too */}
+                        {identificationResult?.alternatives && identificationResult.alternatives.length > 0 && 
+                         identificationResult.confidence !== 'high' && (
+                            <div className="px-4 py-3 border-b border-orange-100">
+                                <p className="text-xs font-medium text-orange-800 mb-2">Könnte auch sein:</p>
+                                {identificationResult.alternatives.map((alt, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelectAlternative(alt)}
+                                        className="w-full text-left p-2 rounded-lg hover:bg-orange-100 text-sm"
+                                    >
+                                        <span className="font-medium">{alt.name}</span>
+                                        <span className="text-orange-600 text-xs ml-2">({alt.reason})</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        
                         <div className="px-4 py-3 bg-orange-50 border-b border-orange-100">
                             <a 
                                 href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(detectedVacationBird.sciName + ' bird')}`}
@@ -702,7 +815,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             </a>
                         </div>
                         
-                        {/* Country Input */}
                         <div className="p-4">
                             <label className="block text-xs text-gray-600 font-medium mb-2">
                                 Wo hast du diesen Vogel entdeckt?
@@ -716,7 +828,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                             />
                         </div>
                         
-                        {/* Actions */}
                         <div className="px-4 pb-4 space-y-2">
                             <button 
                                 onClick={handleAddVacationBird}
@@ -727,7 +838,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                                 Bestätigen & hinzufügen
                             </button>
                             <button 
-                                onClick={() => { setDetectedVacationBird(null); setSelectedImage(null); setVacationCountry(''); }} 
+                                onClick={() => { setDetectedVacationBird(null); setSelectedImage(null); setVacationCountry(''); setIdentificationResult(null); }} 
                                 className="w-full px-4 py-2.5 text-gray-500 font-medium rounded-xl hover:bg-gray-100 text-sm transition-colors"
                             >
                                 Abbrechen
@@ -741,7 +852,20 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         <AlertTriangle className="mx-auto text-red-500 mb-2" size={32} />
                         <h3 className="text-red-800 font-bold mb-2">Nicht erkannt</h3>
                         <p className="text-sm text-red-700 mb-4">{photoError}</p>
-                        <button onClick={() => { setPhotoError(null); setSelectedImage(null); }} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200">
+                        
+                        {/* Image quality issues */}
+                        {identificationResult?.qualityIssues && identificationResult.qualityIssues.length > 0 && (
+                            <div className="mb-4 text-left">
+                                <p className="text-xs font-medium text-red-800 mb-1">Mögliche Probleme:</p>
+                                <ul className="text-xs text-red-700 space-y-1">
+                                    {identificationResult.qualityIssues.map((issue, idx) => (
+                                        <li key={idx}>• {issue}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        
+                        <button onClick={() => { setPhotoError(null); setSelectedImage(null); setIdentificationResult(null); }} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200">
                             Neues Foto
                         </button>
                      </div>
@@ -751,7 +875,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     };
 
     const renderWizard = () => {
-        // Size categories - use genus to categorize
         const sizeGroups = {
             'klein': { 
                 label: 'Klein (Spatz)', 
@@ -775,7 +898,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             }
         };
 
-        // Color keywords - expanded to catch more birds
         const colorGroups = {
             'schwarz': { label: 'Schwarz', color: 'bg-gray-900', keywords: ['schwarz', 'Rabe', 'Krähe', 'Amsel', 'Star', 'Dohle', 'Kormoran', 'Ruß', 'Kohl', 'Trauer'] },
             'weiss': { label: 'Weiß', color: 'bg-white border-2 border-gray-300', keywords: ['weiß', 'Silber', 'Schnee', 'Schwan', 'Möwe', 'Reiher', 'Storch', 'Löffler', 'Seiden'] },
@@ -787,10 +909,8 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             'gruen': { label: 'Grün', color: 'bg-green-500', keywords: ['grün', 'Grün', 'Specht', 'Laubsänger', 'Fitis'] }
         };
 
-        // Get all local birds
         const allBirds = BIRDS_DB.filter(b => (b.locationType || 'local') === modeType);
 
-        // Filter by size
         const filterBySize = (birds: Bird[], size: string | undefined) => {
             if (!size || !sizeGroups[size as keyof typeof sizeGroups]) return birds;
             const genera = sizeGroups[size as keyof typeof sizeGroups].genera;
@@ -799,7 +919,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             );
         };
 
-        // Filter by colors (OR logic - matches any selected color)
         const filterByColors = (birds: Bird[], colors: string[] | undefined) => {
             if (!colors || colors.length === 0) return birds;
             const allKeywords = colors.flatMap(c => colorGroups[c as keyof typeof colorGroups]?.keywords || []);
@@ -811,7 +930,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         const sizeFiltered = filterBySize(allBirds, wizardFilters.size);
         const fullyFiltered = filterByColors(sizeFiltered, wizardFilters.colors);
 
-        // Step 0: Size selection
         const renderSizeStep = () => (
             <div className="space-y-3 animate-fade-in">
                 <div className="text-center mb-4">
@@ -851,7 +969,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             </div>
         );
 
-        // Step 1: Color selection (multi-select)
         const renderColorStep = () => {
             const selectedColors = wizardFilters.colors || [];
             const toggleColor = (colorId: string) => {
@@ -907,7 +1024,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             );
         };
 
-        // Step 2: Results list with images
         const renderResultsStep = () => {
             const displayBirds = wizardSearch.trim() 
                 ? fullyFiltered.filter(b => 
@@ -923,7 +1039,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         <p className="text-xs text-gray-400 mt-1">{fullyFiltered.length} passende Arten</p>
                     </div>
                     
-                    {/* Search within results */}
                     <div className="relative">
                         <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                         <input 
@@ -991,7 +1106,6 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
             );
         };
 
-        // If a bird was selected, show preview
         if (previewBird) return renderPreview();
 
         return (
