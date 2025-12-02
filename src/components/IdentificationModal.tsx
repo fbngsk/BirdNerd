@@ -3,7 +3,7 @@ import { X, Search, Mic, Camera, ArrowRight, Check, Puzzle, HelpCircle, ChevronL
 import { Bird, WikiResult, LocationType, IdentificationResult, VacationBirdResult } from '../types';
 import { BIRDS_DB, WIZARD_SIZES, WIZARD_COLORS } from '../constants';
 import { fetchWikiData } from '../services/birdService';
-import { identifyBirdFromImageFull, identifyBirdGlobalFull, lookupBirdByName, BirdIdentificationResult } from '../services/geminiService';
+import { identifyBirdFromImageFull, identifyBirdGlobalFull, lookupBirdByName, lookupBirdByNameWithSuggestions, BirdIdentificationResult, BirdSuggestion } from '../services/geminiService';
 
 interface IdentificationModalProps {
     onClose: () => void;
@@ -27,6 +27,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     // Vacation Search State
     const [searchingVacation, setSearchingVacation] = useState(false);
     const [vacationSearchResult, setVacationSearchResult] = useState<VacationBirdResult | null>(null);
+    const [vacationSuggestions, setVacationSuggestions] = useState<BirdSuggestion[]>([]);
 
     // Photo ID State
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,14 +175,29 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
         
         setSearchingVacation(true);
         setVacationSearchResult(null);
+        setVacationSuggestions([]);
         
-        const result = await lookupBirdByName(searchTerm);
+        const result = await lookupBirdByNameWithSuggestions(searchTerm);
         
-        if (result) {
-            setVacationSearchResult(result);
+        if (result.found) {
+            if (result.exact) {
+                // Eindeutiger Treffer
+                setVacationSearchResult(result.exact);
+            } else if (result.suggestions && result.suggestions.length > 0) {
+                // Mehrere Möglichkeiten
+                setVacationSuggestions(result.suggestions);
+            }
         }
         
         setSearchingVacation(false);
+    };
+    
+    const handleSelectVacationSuggestion = (suggestion: BirdSuggestion) => {
+        setVacationSuggestions([]);
+        setDetectedVacationBird({
+            name: suggestion.name,
+            sciName: suggestion.sciName
+        });
     };
 
     useEffect(() => {
@@ -652,7 +668,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                         </button>
                     ))}
                     
-                    {modeType === 'vacation' && searchTerm && searchResults.length === 0 && !vacationSearchResult && (
+                    {modeType === 'vacation' && searchTerm && searchResults.length === 0 && !vacationSearchResult && vacationSuggestions.length === 0 && (
                         <div className="text-center py-6">
                             <p className="text-gray-400 text-sm mb-4">Nicht in der Datenbank gefunden.</p>
                             <button
@@ -671,6 +687,40 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
                                         Weltweit suchen
                                     </>
                                 )}
+                            </button>
+                        </div>
+                    )}
+                    
+                    {/* Multiple suggestions for ambiguous names */}
+                    {vacationSuggestions.length > 0 && (
+                        <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200 animate-fade-in">
+                            <div className="flex items-center gap-2 mb-3">
+                                <HelpCircle className="text-orange" size={20} />
+                                <h4 className="font-bold text-orange">Welche Art meinst du?</h4>
+                            </div>
+                            <p className="text-xs text-orange-600 mb-4">
+                                Es gibt mehrere Arten mit diesem Namen. Wähle die richtige:
+                            </p>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {vacationSuggestions.map((suggestion, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelectVacationSuggestion(suggestion)}
+                                        className="w-full p-3 bg-white rounded-xl border border-orange-200 flex items-center justify-between hover:border-orange hover:bg-orange/5 transition-all text-left"
+                                    >
+                                        <div>
+                                            <span className="font-bold text-gray-800">{suggestion.name}</span>
+                                            <p className="text-xs text-gray-500 italic">{suggestion.sciName}</p>
+                                        </div>
+                                        <ArrowRight size={16} className="text-orange" />
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setVacationSuggestions([])}
+                                className="w-full mt-3 py-2 text-gray-400 text-sm hover:text-gray-600"
+                            >
+                                Abbrechen
                             </button>
                         </div>
                     )}
