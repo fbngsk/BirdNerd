@@ -97,6 +97,18 @@ export interface BirdIdentificationResult {
 // FUNCTIONS
 // ============================================
 
+export interface BirdSuggestion {
+    name: string;
+    sciName: string;
+}
+
+export interface BirdLookupResult {
+    found: boolean;
+    exact?: BirdSuggestion;
+    suggestions?: BirdSuggestion[];
+    message?: string;
+}
+
 export const lookupBirdByName = async (birdName: string): Promise<VacationBirdResult | null> => {
     if (!ai) return null;
 
@@ -129,6 +141,72 @@ Antworte NUR mit dem JSON-Objekt, kein Markdown, kein Text davor oder danach.`
     } catch (error) {
         console.error("Bird lookup failed:", error);
         return null;
+    }
+};
+
+/**
+ * Enhanced bird lookup that handles ambiguous names
+ * Returns multiple suggestions if the name could refer to multiple species
+ */
+export const lookupBirdByNameWithSuggestions = async (birdName: string): Promise<BirdLookupResult> => {
+    if (!ai) return { found: false, message: "KI nicht verfügbar" };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Der Nutzer sucht nach einem Vogel namens "${birdName}".
+
+AUFGABE: Prüfe ob der Name eindeutig ist oder ob es mehrere Arten geben könnte.
+
+REGELN:
+1. Wenn der Name EINDEUTIG eine Art beschreibt (z.B. "Amsel", "Kohlmeise"):
+   Antworte mit: {"type": "exact", "name": "Deutscher Name", "sciName": "Wissenschaftlicher Name"}
+
+2. Wenn der Name MEHRERE Arten beschreiben könnte (z.B. "Tukan", "Papagei", "Adler", "Specht"):
+   Antworte mit: {"type": "ambiguous", "suggestions": [
+     {"name": "Art 1 mit vollem deutschen Namen", "sciName": "Wissenschaftlicher Name"},
+     {"name": "Art 2 mit vollem deutschen Namen", "sciName": "Wissenschaftlicher Name"},
+     ... (maximal 8 Vorschläge, die bekanntesten/häufigsten zuerst)
+   ]}
+
+3. Wenn der Name KEIN bekannter Vogelname ist:
+   Antworte mit: {"type": "unknown"}
+
+WICHTIG: 
+- Antworte NUR mit dem JSON-Objekt
+- Kein Markdown, kein Text davor oder danach
+- Bei Gattungsnamen wie "Tukan", "Kolibri", "Papagei" etc. IMMER "ambiguous" mit konkreten Arten`
+        });
+
+        const text = response.text?.trim();
+        if (!text) return { found: false, message: "Keine Antwort erhalten" };
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        try {
+            const result = JSON.parse(jsonStr);
+            
+            if (result.type === 'exact') {
+                return {
+                    found: true,
+                    exact: { name: result.name, sciName: result.sciName }
+                };
+            }
+            
+            if (result.type === 'ambiguous' && result.suggestions?.length > 0) {
+                return {
+                    found: true,
+                    suggestions: result.suggestions
+                };
+            }
+            
+            return { found: false, message: "Vogel nicht gefunden" };
+        } catch {
+            return { found: false, message: "Fehler bei der Verarbeitung" };
+        }
+    } catch (error) {
+        console.error("Bird lookup failed:", error);
+        return { found: false, message: "Fehler bei der Suche" };
     }
 };
 
