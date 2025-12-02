@@ -1,5 +1,10 @@
 import React from 'react';
-import { MapPin, Users, Shield, X } from 'lucide-react';
+import { MapPin, Users, Shield, X, Navigation, Home } from 'lucide-react';
+
+// ============================================
+// LOCATION SHARE PREFERENCE MODAL
+// Asks user if they want to share locations with community
+// ============================================
 
 interface LocationShareModalProps {
   birdName: string;
@@ -82,6 +87,68 @@ export const LocationShareModal: React.FC<LocationShareModalProps> = ({
           
           <p className="text-[10px] text-gray-400 text-center">
             Du kannst diese Einstellung jederzeit in deinem Profil ändern.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// SIGHTING LOCATION CONFIRMATION MODAL
+// Asks if bird was seen at current location or elsewhere
+// ============================================
+
+interface SightingLocationModalProps {
+  birdName: string;
+  onConfirmHere: () => void;
+  onConfirmElsewhere: () => void;
+  onClose: () => void;
+}
+
+export const SightingLocationModal: React.FC<SightingLocationModalProps> = ({
+  birdName,
+  onConfirmHere,
+  onConfirmElsewhere,
+  onClose
+}) => {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 animate-fade-in">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl max-w-sm w-full shadow-2xl animate-slide-up overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-teal to-cyan-500 p-6 text-white text-center">
+          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <MapPin size={32} />
+          </div>
+          <h3 className="font-bold text-xl leading-tight">
+            Hast du den {birdName} an deinem aktuellen Standort gesehen?
+          </h3>
+        </div>
+        
+        {/* Content */}
+        <div className="p-6 space-y-3">
+          <button
+            onClick={onConfirmHere}
+            className="w-full py-4 bg-teal text-white rounded-xl font-bold hover:bg-teal-700 transition-colors flex items-center justify-center gap-3"
+          >
+            <Navigation size={20} />
+            Ja, hier
+          </button>
+          
+          <button
+            onClick={onConfirmElsewhere}
+            className="w-full py-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-3"
+          >
+            <Home size={20} />
+            Nein, woanders
+          </button>
+          
+          <p className="text-[11px] text-gray-400 text-center pt-2">
+            Bei "Woanders" wird der Vogel nur in deiner Sammlung gespeichert, aber nicht auf dem Community-Radar angezeigt.
           </p>
         </div>
       </div>
