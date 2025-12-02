@@ -1172,7 +1172,21 @@ export default function App() {
             )}
 
             {showQuiz && (
-                <QuizView onClose={() => setShowQuiz(false)} />
+                <QuizView 
+                    onClose={() => setShowQuiz(false)} 
+                    onQuizComplete={(score, total) => {
+                        // Update streak when quiz is completed
+                        if (userProfile) {
+                            const { profile: updatedProfile, justIncreased } = updateStreak(userProfile);
+                            setUserProfile(updatedProfile);
+                            syncWithSupabase(updatedProfile, xp, collectedIds);
+                            
+                            if (justIncreased && updatedProfile.currentStreak > 1) {
+                                setTimeout(() => setNewStreak(updatedProfile.currentStreak), 500);
+                            }
+                        }
+                    }}
+                />
             )}
 
             {showLeaderboard && userProfile && (
