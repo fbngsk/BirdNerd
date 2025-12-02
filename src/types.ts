@@ -93,10 +93,7 @@ export interface VacationBirdResult {
 export type LeaderboardScope = 'circle' | 'global';
 export type WizardStep = 'location' | 'size' | 'color' | 'activity' | 'result';
 
-// ============================================
-// RADAR FEATURE TYPES
-// ============================================
-
+// Radar Feature Types
 export interface BirdSighting {
     id: string;
     user_id: string;
