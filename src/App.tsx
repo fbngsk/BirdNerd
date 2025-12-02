@@ -847,11 +847,14 @@ export default function App() {
             
             // Radar: Handle location sharing
             if (!isGuestRef.current && userProfile?.id) {
-                if (locationSharePref === 'always') {
+                // Treat null/undefined as 'ask'
+                const currentPref = locationSharePref || 'ask';
+                
+                if (currentPref === 'always') {
                     // User has opted in - ask if seen at current location
                     setPendingBirdForSighting(bird);
                     setShowSightingLocationModal(true);
-                } else if (locationSharePref === 'ask') {
+                } else if (currentPref === 'ask') {
                     // First time - ask if they want to share at all
                     setPendingBirdForSighting(bird);
                     setShowLocationShareModal(true);
@@ -1042,6 +1045,7 @@ export default function App() {
                     onNavigateToDex={() => setActiveTab('dex')}
                     onBirdClick={setModalBird}
                     onStartQuiz={() => setShowQuiz(true)}
+                    locationPermission={locationPermission}
                 />
             );
         }
