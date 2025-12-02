@@ -957,10 +957,12 @@ export default function App() {
 
     const handleRemove = async (bird: Bird) => {
         const newIds = collectedIds.filter(id => id !== bird.id);
-        const newXp = Math.max(0, xp - (bird.points || 10));
         
+        // Remove from vacation birds if applicable
+        let newVacationBirds = vacationBirds;
         if (bird.id.startsWith('vacation_')) {
-            setVacationBirds(prev => prev.filter(vb => vb.id !== bird.id));
+            newVacationBirds = vacationBirds.filter(vb => vb.id !== bird.id);
+            setVacationBirds(newVacationBirds);
             
             if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
                 await supabase.from('vacation_birds').delete().eq('id', bird.id);
@@ -970,7 +972,6 @@ export default function App() {
         // Remove from community radar (bird_sightings)
         if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
             const today = new Date().toISOString().split('T')[0];
-            // Delete the most recent sighting of this bird by this user (today)
             await supabase
                 .from('bird_sightings')
                 .delete()
@@ -981,11 +982,115 @@ export default function App() {
             console.log('[Birbz] Removed bird sighting from radar:', bird.name);
         }
         
+        // Recalculate all XP and badges from scratch
+        let recalculatedXp = 0;
+        const recalculatedBadges: string[] = [];
+        
+        // Calculate base XP for all remaining birds
+        const remainingLocalBirds = BIRDS_DB.filter(b => newIds.includes(b.id));
+        const remainingVacationBirds = newVacationBirds;
+        
+        // Add XP for each bird
+        remainingLocalBirds.forEach(b => {
+            recalculatedXp += b.points || 10;
+        });
+        remainingVacationBirds.forEach(b => {
+            recalculatedXp += b.points || 25;
+        });
+        
+        // Recalculate which badges should still be earned
+        const collectedBirds = remainingLocalBirds;
+        const uniqueCountries = new Set(
+            remainingVacationBirds
+                .filter(b => b.country)
+                .map(b => b.country!.toLowerCase().trim())
+        );
+        
+        // Check each badge
+        BADGES_DB.forEach(badge => {
+            let stillEarned = false;
+            const count = newIds.length;
+            
+            switch (badge.condition) {
+                case 'count':
+                    if (badge.category === 'streak') {
+                        // Streak badges stay earned once achieved
+                        if (userProfile?.badges?.includes(badge.id)) {
+                            stillEarned = true;
+                        }
+                    } else if (badge.threshold && count >= badge.threshold) {
+                        stillEarned = true;
+                    }
+                    break;
+                case 'specific':
+                    if (badge.targetValue && newIds.includes(badge.targetValue)) {
+                        stillEarned = true;
+                    }
+                    break;
+                case 'rarity':
+                    if (badge.targetValue) {
+                        const hasRarity = [...remainingLocalBirds, ...remainingVacationBirds]
+                            .some(b => b.rarity.includes(badge.targetValue!));
+                        stillEarned = hasRarity;
+                    }
+                    break;
+                case 'location':
+                    if (badge.targetValue === 'vacation') {
+                        stillEarned = remainingVacationBirds.length > 0;
+                    }
+                    break;
+                case 'time':
+                    // Time badges stay earned once achieved
+                    if (userProfile?.badges?.includes(badge.id)) {
+                        stillEarned = true;
+                    }
+                    break;
+                case 'level':
+                    // Will be checked after XP calculation
+                    break;
+                case 'family_count':
+                    if (badge.targetValue && badge.threshold) {
+                        const familyPrefixes = BIRD_FAMILIES[badge.targetValue] || [];
+                        const familyCount = collectedBirds.filter(b => 
+                            familyPrefixes.some(prefix => b.sciName.includes(prefix))
+                        ).length;
+                        stillEarned = familyCount >= badge.threshold;
+                    }
+                    break;
+                case 'country_count':
+                    if (badge.threshold) {
+                        stillEarned = uniqueCountries.size >= badge.threshold;
+                    }
+                    break;
+            }
+            
+            if (stillEarned) {
+                recalculatedBadges.push(badge.id);
+                recalculatedXp += badge.xpReward;
+            }
+        });
+        
+        // Check level badges based on final XP
+        BADGES_DB.forEach(badge => {
+            if (badge.condition === 'level' && badge.threshold) {
+                const levelInfo = LEVEL_THRESHOLDS.find(l => recalculatedXp < l.max) || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+                if (levelInfo.level >= badge.threshold && !recalculatedBadges.includes(badge.id)) {
+                    recalculatedBadges.push(badge.id);
+                    recalculatedXp += badge.xpReward;
+                }
+            }
+        });
+        
         setCollectedIds(newIds);
-        setXp(newXp);
+        setXp(recalculatedXp);
         
         if (userProfile) {
-            syncWithSupabase(userProfile, newXp, newIds);
+            const updatedProfile = {
+                ...userProfile,
+                badges: recalculatedBadges
+            };
+            setUserProfile(updatedProfile);
+            syncWithSupabase(updatedProfile, recalculatedXp, newIds);
         }
         
         setModalBird(null);
