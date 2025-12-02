@@ -841,13 +841,15 @@ export default function App() {
             }
             
             // Radar: Handle location sharing - show modal AFTER celebration
-            if (!isGuestRef.current && userProfile?.id) {
+            // Skip for vacation birds (they're not seen at current location)
+            if (!isGuestRef.current && userProfile?.id && !bird.id.startsWith('vacation_')) {
                 // Store bird for later - modal will show after celebration
                 setPendingBirdForSighting(bird);
             }
         } else {
             // No GPS - still allow sharing via map picker for logged in users
-            if (!isGuestRef.current && userProfile?.id) {
+            // Skip for vacation birds
+            if (!isGuestRef.current && userProfile?.id && !bird.id.startsWith('vacation_')) {
                 setPendingBirdForSighting(bird);
             }
         }
