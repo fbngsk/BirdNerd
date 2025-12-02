@@ -252,7 +252,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                 Standort nicht aktiviert
                             </p>
                             <p className="text-xs text-orange-600 mt-1">
-                                Aktiviere GPS in deinen Einstellungen, um Sichtungen auf der Community-Karte zu teilen und den Radar zu nutzen.
+                                Aktiviere GPS in deinen Einstellungen, um Sichtungen auf der Community-Karte zu teilen und das Vogelradar zu nutzen.
                             </p>
                         </div>
                     </div>
