@@ -963,6 +963,20 @@ export default function App() {
             }
         }
         
+        // Remove from community radar (bird_sightings)
+        if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
+            const today = new Date().toISOString().split('T')[0];
+            // Delete the most recent sighting of this bird by this user (today)
+            await supabase
+                .from('bird_sightings')
+                .delete()
+                .eq('user_id', userProfile.id)
+                .eq('bird_id', bird.id)
+                .eq('sighted_at', today);
+            
+            console.log('[Birbz] Removed bird sighting from radar:', bird.name);
+        }
+        
         setCollectedIds(newIds);
         setXp(newXp);
         
