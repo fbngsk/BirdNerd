@@ -19,11 +19,27 @@ export const QuizView: React.FC<QuizViewProps> = ({ onClose, onQuizComplete }) =
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [showFeedback, setShowFeedback] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('Lade Quiz-Daten...');
 
     const TOTAL_ROUNDS = 20;
+    
+    const LOADING_MESSAGES = [
+        'Lade Quiz-Daten...',
+        'Vögel werden geweckt...',
+        'Vögel machen sich hübsch...',
+        'Gleich geht\'s los...'
+    ];
 
     const startQuiz = async () => {
         setLoading(true);
+        setLoadingMessage(LOADING_MESSAGES[0]);
+        
+        // Rotate loading messages
+        let messageIndex = 0;
+        const messageInterval = setInterval(() => {
+            messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length;
+            setLoadingMessage(LOADING_MESSAGES[messageIndex]);
+        }, 2500);
         
         // Generate Questions
         const newQuestions = [];
@@ -104,6 +120,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ onClose, onQuizComplete }) =
         setScore(0);
         setGameState('playing');
         setLoading(false);
+        clearInterval(messageInterval);
     };
 
     const handleAnswer = (birdId: string) => {
@@ -145,9 +162,9 @@ export const QuizView: React.FC<QuizViewProps> = ({ onClose, onQuizComplete }) =
             <div className="bg-teal/10 p-6 rounded-full mb-2">
                 <GraduationCap size={48} className="text-teal" />
             </div>
-            <h2 className="text-2xl font-bold text-teal text-center">Vogel-Training (Profi)</h2>
+            <h2 className="text-2xl font-bold text-teal text-center">Vogel-Quiz</h2>
             <p className="text-gray-500 text-center max-w-xs text-sm">
-                Jetzt wird's knifflig! Unterscheide ähnliche Arten aus derselben Familie.
+                Teste dein Wissen! Erkennst du die Vögel anhand der Bilder?
             </p>
 
             <div className="grid grid-cols-1 w-full gap-3 mt-2">
@@ -160,12 +177,12 @@ export const QuizView: React.FC<QuizViewProps> = ({ onClose, onQuizComplete }) =
                         <Image size={24} />
                     </div>
                     <div className="text-left">
-                        <div className="font-bold text-teal">Bild-Quiz starten</div>
-                        <div className="text-xs text-gray-400">20 Fragen - Erkennst du den Unterschied?</div>
+                        <div className="font-bold text-teal">Quiz starten</div>
+                        <div className="text-xs text-gray-400">20 Fragen – Welcher Vogel ist das?</div>
                     </div>
                 </button>
             </div>
-            {loading && <div className="text-teal text-sm font-bold animate-pulse">Lade Quiz-Daten...</div>}
+            {loading && <div className="text-teal text-sm font-bold animate-pulse">{loadingMessage}</div>}
         </div>
     );
 
