@@ -216,7 +216,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-cream">
+    <div className="fixed inset-0 z-40 flex flex-col bg-cream pt-0 pb-24">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
       {/* Selected Sighting Panel */}
       {selectedSighting && (
-        <div className="absolute bottom-20 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
+        <div className="absolute bottom-28 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
           <button
             onClick={() => setSelectedSighting(null)}
             className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600"
