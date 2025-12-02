@@ -133,7 +133,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                 <span className="font-bold text-gray-700">Deine Sammlung</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-2xl font-bold text-teal">{collectionPercent}%</span>
+                                <span className="text-2xl font-bold text-teal">{collectedLocalCount}/{totalBirds}</span>
                                 <ChevronRight size={20} className="text-gray-300" />
                             </div>
                         </div>
@@ -146,8 +146,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                         
                         <div className="flex justify-between text-xs text-gray-400">
-                            <span>{collectedLocalCount} von {totalBirds} Arten</span>
-                            <span>{totalBirds - collectedLocalCount} noch zu entdecken</span>
+                            <span>{collectedLocalCount} Arten entdeckt</span>
+                            <span>{totalBirds - collectedLocalCount} noch zu finden</span>
                         </div>
                     </button>
                 )}
