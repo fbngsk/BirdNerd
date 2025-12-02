@@ -11,7 +11,6 @@ interface Sighting {
   lat: number;
   lng: number;
   sighted_at: string;
-  sighting_count: number;
 }
 
 interface RadarMapProps {
@@ -21,20 +20,12 @@ interface RadarMapProps {
 
 // Rarity to color mapping
 const getRarityColor = (rarity: string): string => {
-  switch (rarity?.toLowerCase()) {
-    case 'legendär':
-      return '#EAB308'; // Gold
-    case 'selten':
-    case 'epic':
-      return '#A855F7'; // Purple
-    case 'gefährdet':
-    case 'stark gefährdet':
-      return '#EF4444'; // Red
-    case 'urlaubsfund':
-      return '#F97316'; // Orange
-    default:
-      return '#14B8A6'; // Teal (common)
-  }
+  const r = rarity?.toLowerCase() || '';
+  if (r.includes('legendär')) return '#EAB308';
+  if (r.includes('selten') || r.includes('epic')) return '#A855F7';
+  if (r.includes('gefährdet')) return '#EF4444';
+  if (r.includes('urlaub')) return '#F97316';
+  return '#14B8A6';
 };
 
 // Time filter options
@@ -63,26 +54,22 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
   // Load Leaflet CSS and JS dynamically
   useEffect(() => {
-    // Check if already loaded
-    if (window.L) {
+    if ((window as any).L) {
       setMapReady(true);
       return;
     }
 
-    // Load CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
 
-    // Load JS
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.onload = () => setMapReady(true);
     document.head.appendChild(script);
 
     return () => {
-      // Cleanup map on unmount
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -94,30 +81,26 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
   useEffect(() => {
     if (!mapReady || !mapContainerRef.current || mapRef.current) return;
 
-    const L = window.L;
+    const L = (window as any).L;
     
-    // Create map
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
-    }).setView([center.lat, center.lng], userLocation ? 11 : 6);
+    }).setView([center.lat, center.lng], userLocation ? 13 : 6);
 
-    // Add tile layer (OpenStreetMap)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap',
       maxZoom: 18,
     }).addTo(map);
 
-    // Add zoom control to bottom right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Add user location marker if available
     if (userLocation) {
       const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: `<div style="
           width: 20px;
           height: 20px;
-          background: #3B82F6;
+          background: #14B8A6;
           border: 3px solid white;
           border-radius: 50%;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -140,39 +123,24 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     setError(null);
 
     try {
+      const dateLimit = new Date();
+      dateLimit.setDate(dateLimit.getDate() - timeFilter);
+      
       const { data, error: fetchError } = await supabase
-        .rpc('get_nearby_sightings', {
-          user_lat: center.lat,
-          user_lng: center.lng,
-          radius_km: 100,
-          days_back: timeFilter
-        });
-
+        .from('bird_sightings')
+        .select('id, bird_id, bird_name, bird_rarity, lat, lng, sighted_at')
+        .eq('flagged', false)
+        .gte('sighted_at', dateLimit.toISOString().split('T')[0])
+        .order('sighted_at', { ascending: false })
+        .limit(500);
+      
       if (fetchError) throw fetchError;
+      
+      console.log('[Radar] Loaded sightings:', data?.length || 0, data);
       setSightings(data || []);
     } catch (e) {
-      console.error('Failed to fetch sightings:', e);
+      console.error('[Radar] Failed to fetch sightings:', e);
       setError('Konnte Sichtungen nicht laden');
-      
-      // Fallback: Direct query if RPC fails
-      try {
-        const dateLimit = new Date();
-        dateLimit.setDate(dateLimit.getDate() - timeFilter);
-        
-        const { data: fallbackData } = await supabase
-          .from('bird_sightings')
-          .select('*')
-          .eq('flagged', false)
-          .gte('sighted_at', dateLimit.toISOString().split('T')[0])
-          .limit(500);
-        
-        if (fallbackData) {
-          setSightings(fallbackData);
-          setError(null);
-        }
-      } catch {
-        // Keep error
-      }
     } finally {
       setLoading(false);
     }
@@ -180,17 +148,19 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
   useEffect(() => {
     fetchSightings();
-  }, [timeFilter, center.lat, center.lng]);
+  }, [timeFilter]);
 
   // Update markers when sightings change
   useEffect(() => {
-    if (!mapRef.current || !window.L) return;
+    if (!mapRef.current || !(window as any).L) return;
 
-    const L = window.L;
+    const L = (window as any).L;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
+
+    console.log('[Radar] Adding markers for', sightings.length, 'sightings');
 
     // Add sighting markers
     sightings.forEach(sighting => {
@@ -199,30 +169,30 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
       const icon = L.divIcon({
         className: 'sighting-marker',
         html: `<div style="
-          width: ${sighting.sighting_count > 1 ? '32px' : '24px'};
-          height: ${sighting.sighting_count > 1 ? '32px' : '24px'};
+          width: 28px;
+          height: 28px;
           background: ${color};
-          border: 2px solid white;
+          border: 3px solid white;
           border-radius: 50%;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
-          font-size: 10px;
-          font-weight: bold;
-        ">${sighting.sighting_count > 1 ? sighting.sighting_count : ''}</div>`,
-        iconSize: [sighting.sighting_count > 1 ? 32 : 24, sighting.sighting_count > 1 ? 32 : 24],
-        iconAnchor: [sighting.sighting_count > 1 ? 16 : 12, sighting.sighting_count > 1 ? 16 : 12],
+          font-size: 14px;
+        ">🐦</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
       });
 
-      const marker = L.marker([sighting.lat, sighting.lng], { icon })
+      const marker = L.marker([Number(sighting.lat), Number(sighting.lng)], { icon })
         .addTo(mapRef.current)
         .on('click', () => setSelectedSighting(sighting));
 
       markersRef.current.push(marker);
     });
-  }, [sightings]);
+    
+    console.log('[Radar] Markers added:', markersRef.current.length);
+  }, [sightings, mapReady]);
 
   // Center on user location
   const centerOnUser = () => {
@@ -246,9 +216,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-cream flex flex-col">
+    <div className="h-full w-full flex flex-col bg-cream">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between safe-area-top">
+      <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MapPin className="text-teal" size={24} />
           <div>
@@ -276,22 +246,12 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
-          
-          {/* Close */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200"
-            >
-              <X size={18} />
-            </button>
-          )}
         </div>
       </div>
 
       {/* Filter Dropdown */}
       {showFilters && (
-        <div className="absolute top-16 right-4 z-20 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="absolute top-16 right-4 z-[1000] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           {TIME_FILTERS.map(filter => (
             <button
               key={filter.value}
@@ -315,7 +275,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
         
         {/* Loading Overlay */}
         {loading && (
-          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-[500]">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="animate-spin text-teal" size={32} />
               <span className="text-sm text-gray-500">Lade Sichtungen...</span>
@@ -325,7 +285,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
         {/* Error Message */}
         {error && !loading && (
-          <div className="absolute top-4 left-4 right-4 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="absolute top-4 left-4 right-4 z-[500] bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
             <Info size={20} className="text-red-500 flex-shrink-0" />
             <span className="text-sm text-red-700">{error}</span>
           </div>
@@ -335,14 +295,14 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
         {userLocation && (
           <button
             onClick={centerOnUser}
-            className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-teal hover:bg-gray-50 transition-colors"
+            className="absolute bottom-24 right-4 z-[500] w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-teal hover:bg-gray-50 transition-colors"
           >
             <Navigation size={24} />
           </button>
         )}
 
         {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-white rounded-xl shadow-lg p-3 text-xs">
+        <div className="absolute bottom-4 left-4 z-[500] bg-white rounded-xl shadow-lg p-3 text-xs">
           <p className="font-bold text-gray-700 mb-2">Legende</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -367,10 +327,10 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
       {/* Selected Sighting Panel */}
       {selectedSighting && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 animate-slide-up safe-area-bottom">
+        <div className="absolute bottom-20 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
           <button
             onClick={() => setSelectedSighting(null)}
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600"
+            className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600"
           >
             <X size={20} />
           </button>
@@ -384,12 +344,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-lg text-gray-800">{selectedSighting.bird_name}</h3>
-              <p className="text-sm text-gray-500">{selectedSighting.bird_rarity}</p>
+              <p className="text-sm text-gray-500">{selectedSighting.bird_rarity || 'Häufig'}</p>
               <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
                 <span>📅 {formatDate(selectedSighting.sighted_at)}</span>
-                {selectedSighting.sighting_count > 1 && (
-                  <span>👥 {selectedSighting.sighting_count} Sichtungen</span>
-                )}
               </div>
             </div>
           </div>
@@ -410,10 +367,3 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     </div>
   );
 };
-
-// Add to global window type
-declare global {
-  interface Window {
-    L: any;
-  }
-}
