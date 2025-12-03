@@ -432,13 +432,14 @@ export default function App() {
 
         loadSession();
 
-        let isInitialLoad = true;
+       let isInitialLoad = true;
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log('[Birbz] Auth state change:', event, 'initial:', isInitialLoad);
             
             if (event === 'SIGNED_IN' && session?.user && !isInitialLoad) {
-                window.location.reload();
+                // Kein Reload mehr - verhindert Endlosschleife
+                console.log('[Birbz] User signed in, skipping reload');
             } else if (event === 'SIGNED_OUT' && !isGuestRef.current) {
                 setUserProfile(null);
                 setCollectedIds([]);
