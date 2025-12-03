@@ -1252,7 +1252,7 @@ export const IdentificationModal: React.FC<IdentificationModalProps> = ({ onClos
     };
 
     return (
-        <div className="fixed inset-0 bg-cream z-40 animate-fade-in overflow-hidden">
+        <div className="fixed inset-0 bg-cream z-[60] animate-fade-in overflow-hidden">
             <div 
                 className="w-full h-full flex flex-col"
                 style={{ 
