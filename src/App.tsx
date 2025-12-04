@@ -1,3 +1,4 @@
+```typescript
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -331,9 +332,16 @@ export default function App() {
             const match = path.match(/^\/s\/([A-Z0-9]{6})$/i);
             if (match) {
                 const code = match[1].toUpperCase();
+                // Im localStorage speichern, damit es Onboarding überlebt
+                localStorage.setItem('pendingSwarmCode', code);
                 setPendingSwarmCode(code);
-                // Clean URL
                 window.history.replaceState({}, '', '/');
+            } else {
+                // Check ob noch ein Code im localStorage liegt
+                const savedCode = localStorage.getItem('pendingSwarmCode');
+                if (savedCode) {
+                    setPendingSwarmCode(savedCode);
+                }
             }
         };
         checkInviteLink();
@@ -348,6 +356,8 @@ export default function App() {
                     setUserSwarm(result.swarm);
                     setShowSwarmView(true);
                 }
+                // Code aus localStorage entfernen nach Verarbeitung
+                localStorage.removeItem('pendingSwarmCode');
                 setPendingSwarmCode(null);
             }
         };
@@ -1182,6 +1192,7 @@ export default function App() {
                 <DexView 
                     collectedIds={collectedIds} 
                     vacationBirds={vacationBirds}
+                    swarm={userSwarm}
                     onBirdClick={setModalBird} 
                 />
             );
@@ -1412,3 +1423,4 @@ export default function App() {
         </div>
     );
 }
+```
