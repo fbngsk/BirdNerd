@@ -17,11 +17,13 @@ import { Onboarding } from './components/Onboarding';
 import { LegendaryCard } from './components/LegendaryCard';
 import { RadarMap } from './components/RadarMap';
 import { LocationShareModal, UnusualSightingModal } from './components/LocationShareModal';
-import { Bird, TabType, UserProfile, Badge } from './types';
+import { SwarmView } from './components/SwarmView';
+import { Bird, TabType, UserProfile, Badge, Swarm } from './types';
 import { BADGES_DB, BIRDS_DB, BIRD_FAMILIES, LEVEL_THRESHOLDS, XP_CONFIG, calculateSightingXP } from './constants';
 import { getLegendaryArtwork } from './legendaryArtworks';
 import { supabase } from './lib/supabaseClient';
 import { validateBirdLocation } from './services/birdRanges';
+import { getUserSwarm, joinSwarm } from './services/swarmService';
 
 // ========================================
 // FEATURE FLAG: Legendary Cards
@@ -52,7 +54,7 @@ const validateCacheVersion = () => {
     try {
         const storedVersion = localStorage.getItem(CACHE_KEYS.VERSION);
         if (storedVersion !== String(CACHE_VERSION)) {
-            console.log('[BirdNerd] Cache version mismatch, clearing old cache');
+            console.log('[Birbz] Cache version mismatch, clearing old cache');
             Object.values(CACHE_KEYS).forEach(key => {
                 if (key !== CACHE_KEYS.VERSION) {
                     localStorage.removeItem(key);
@@ -61,7 +63,7 @@ const validateCacheVersion = () => {
             localStorage.setItem(CACHE_KEYS.VERSION, String(CACHE_VERSION));
         }
     } catch (e) {
-        console.warn('[BirdNerd] Cache version check failed:', e);
+        console.warn('[Birbz] Cache version check failed:', e);
     }
 };
 
@@ -71,7 +73,7 @@ const saveToCache = (key: string, data: any) => {
     try {
         localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-        console.warn('[BirdNerd] Cache save failed:', e);
+        console.warn('[Birbz] Cache save failed:', e);
     }
 };
 
@@ -85,7 +87,7 @@ const loadFromCache = <T,>(key: string, fallback: T): T => {
         }
         return parsed;
     } catch (e) {
-        console.warn('[BirdNerd] Corrupted cache detected, removing:', key);
+        console.warn('[Birbz] Corrupted cache detected, removing:', key);
         try {
             localStorage.removeItem(key);
         } catch {}
@@ -157,6 +159,11 @@ export default function App() {
     const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'pending'>('pending');
     const [knownLocations, setKnownLocations] = useState<Set<string>>(new Set());
 
+    // Schwarm Feature State
+    const [userSwarm, setUserSwarm] = useState<Swarm | null>(null);
+    const [showSwarmView, setShowSwarmView] = useState(false);
+    const [pendingSwarmCode, setPendingSwarmCode] = useState<string | null>(null);
+
     // Process sync queue when coming back online
     const processSyncQueue = async () => {
         if (!navigator.onLine) return;
@@ -165,7 +172,7 @@ export default function App() {
         const queue = getSyncQueue();
         if (queue.length === 0) return;
         
-        console.log('[BirdNerd] Processing sync queue:', queue.length, 'items');
+        console.log('[Birbz] Processing sync queue:', queue.length, 'items');
         setHasPendingSync(true);
         
         const { data: { user } } = await supabase.auth.getUser();
@@ -198,7 +205,7 @@ export default function App() {
                         break;
                 }
             } catch (error) {
-                console.error('[BirdNerd] Sync error:', error);
+                console.error('[Birbz] Sync error:', error);
                 hasErrors = true;
             }
         }
@@ -213,7 +220,7 @@ export default function App() {
             clearSyncQueue();
             setHasPendingSync(false);
             setSyncSuccess(true);
-            console.log('[BirdNerd] Sync complete');
+            console.log('[Birbz] Sync complete');
             setTimeout(() => setSyncSuccess(false), 2000);
         }
     };
@@ -317,13 +324,43 @@ export default function App() {
 
     const getLocationKey = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
 
+    // Handle invite links (birbz.de/s/CODE)
+    useEffect(() => {
+        const checkInviteLink = () => {
+            const path = window.location.pathname;
+            const match = path.match(/^\/s\/([A-Z0-9]{6})$/i);
+            if (match) {
+                const code = match[1].toUpperCase();
+                setPendingSwarmCode(code);
+                // Clean URL
+                window.history.replaceState({}, '', '/');
+            }
+        };
+        checkInviteLink();
+    }, []);
+
+    // Process pending invite after login
+    useEffect(() => {
+        const processPendingInvite = async () => {
+            if (pendingSwarmCode && userProfile?.id && !userSwarm) {
+                const result = await joinSwarm(userProfile.id, pendingSwarmCode);
+                if (result.success && result.swarm) {
+                    setUserSwarm(result.swarm);
+                    setShowSwarmView(true);
+                }
+                setPendingSwarmCode(null);
+            }
+        };
+        processPendingInvite();
+    }, [pendingSwarmCode, userProfile?.id, userSwarm]);
+
     // Load Session & Profile on Start (with offline fallback)
     useEffect(() => {
         const loadSession = async () => {
             setAppLoading(true);
             
             if (!navigator.onLine) {
-                console.log('[BirdNerd] Offline - loading from cache');
+                console.log('[Birbz] Offline - loading from cache');
                 const cachedProfile = loadFromCache<UserProfile | null>(CACHE_KEYS.USER_PROFILE, null);
                 const cachedIds = loadFromCache<string[]>(CACHE_KEYS.COLLECTED_IDS, []);
                 const cachedXp = loadFromCache<number>(CACHE_KEYS.XP, 0);
@@ -363,7 +400,8 @@ export default function App() {
                             longestStreak: profile.longest_streak || 0,
                             lastLogDate: profile.last_log_date || '',
                             shareLocation: profile.share_location || 'ask',
-                            hasRadarPro: profile.has_radar_pro || false
+                            hasRadarPro: profile.has_radar_pro || false,
+                            swarmId: profile.swarm_id || undefined
                          });
                          
                          setCollectedIds(profile.collected_ids || []);
@@ -405,6 +443,10 @@ export default function App() {
                              setKnownLocations(locations);
                              saveToCache(CACHE_KEYS.KNOWN_LOCATIONS, Array.from(locations));
                          }
+
+                         // Load user's swarm
+                         const swarm = await getUserSwarm(session.user.id);
+                         setUserSwarm(swarm);
                     }
                 } else {
                     const cachedProfile = loadFromCache<UserProfile | null>(CACHE_KEYS.USER_PROFILE, null);
@@ -417,7 +459,7 @@ export default function App() {
                     }
                 }
             } catch (error) {
-                console.error('[BirdNerd] Session load error, trying cache:', error);
+                console.error('[Birbz] Session load error, trying cache:', error);
                 const cachedProfile = loadFromCache<UserProfile | null>(CACHE_KEYS.USER_PROFILE, null);
                 if (cachedProfile) {
                     setUserProfile(cachedProfile);
@@ -432,18 +474,18 @@ export default function App() {
 
         loadSession();
 
-       let isInitialLoad = true;
+        let isInitialLoad = true;
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log('[BirdNerd] Auth state change:', event, 'initial:', isInitialLoad);
+            console.log('[Birbz] Auth state change:', event, 'initial:', isInitialLoad);
             
             if (event === 'SIGNED_IN' && session?.user && !isInitialLoad) {
-                // Kein Reload mehr - verhindert Endlosschleife
-                console.log('[BirdNerd] User signed in, skipping reload');
+                console.log('[Birbz] User signed in, skipping reload');
             } else if (event === 'SIGNED_OUT' && !isGuestRef.current) {
                 setUserProfile(null);
                 setCollectedIds([]);
                 setXp(0);
+                setUserSwarm(null);
                 clearCache();
             }
             
@@ -468,6 +510,7 @@ export default function App() {
             setUserProfile(null);
             setCollectedIds([]);
             setXp(0);
+            setUserSwarm(null);
             setShowProfile(false);
             setActiveTab('home');
             isGuestRef.current = false;
@@ -491,6 +534,7 @@ export default function App() {
             setCollectedIds([]);
             setVacationBirds([]);
             setXp(0);
+            setUserSwarm(null);
             setShowProfile(false);
             setActiveTab('home');
             isGuestRef.current = false;
@@ -508,6 +552,16 @@ export default function App() {
             setUserProfile({
                 ...userProfile,
                 friends: newFriends
+            });
+        }
+    };
+
+    const handleSwarmChange = (swarm: Swarm | null) => {
+        setUserSwarm(swarm);
+        if (userProfile) {
+            setUserProfile({
+                ...userProfile,
+                swarmId: swarm?.id
             });
         }
     };
@@ -663,11 +717,9 @@ export default function App() {
     // RADAR FEATURE - LOCATION SHARING HANDLERS
     // ========================================
     
-    // Save bird sighting with custom location support
     const saveBirdSightingWithLocation = async (bird: Bird, lat: number, lng: number, forceFlag: boolean = false) => {
         if (!userProfile || isGuestRef.current) return;
         
-        // Round to ~200m grid
         const roundedLat = Math.round(lat * 500) / 500;
         const roundedLng = Math.round(lng * 500) / 500;
         
@@ -690,9 +742,9 @@ export default function App() {
         if (navigator.onLine) {
             const { error } = await supabase.from('bird_sightings').insert(sightingData);
             if (error) {
-                console.error('[BirdNerd] Failed to save sighting:', error);
+                console.error('[Birbz] Failed to save sighting:', error);
             } else {
-                console.log('[BirdNerd] Sighting saved:', bird.name, shouldFlag ? '(flagged)' : '');
+                console.log('[Birbz] Sighting saved:', bird.name, shouldFlag ? '(flagged)' : '');
             }
         } else {
             addToSyncQueue({
@@ -704,7 +756,6 @@ export default function App() {
         }
     };
     
-    // User chose "Current Location"
     const handleShareCurrentLocation = async () => {
         setShowLocationShareModal(false);
         
@@ -724,7 +775,6 @@ export default function App() {
         setPendingBirdForSighting(null);
     };
     
-    // User chose custom location on map
     const handleShareCustomLocation = async (lat: number, lng: number) => {
         setShowLocationShareModal(false);
         
@@ -744,14 +794,12 @@ export default function App() {
         setPendingBirdForSighting(null);
     };
     
-    // User skipped sharing
     const handleSkipLocationShare = () => {
         setShowLocationShareModal(false);
         setPendingBirdForSighting(null);
-        console.log('[BirdNerd] User skipped location sharing');
+        console.log('[Birbz] User skipped location sharing');
     };
     
-    // User confirmed unusual sighting
     const handleUnusualSightingConfirm = async () => {
         setShowUnusualSightingModal(false);
         
@@ -764,7 +812,6 @@ export default function App() {
         setUnusualSightingReason('');
     };
     
-    // User cancelled unusual sighting
     const handleUnusualSightingCancel = () => {
         setShowUnusualSightingModal(false);
         setPendingBirdForSighting(null);
@@ -841,15 +888,10 @@ export default function App() {
                 }
             }
             
-            // Radar: Handle location sharing - show modal AFTER celebration
-            // Skip for vacation birds (they're not seen at current location)
             if (!isGuestRef.current && userProfile?.id && !bird.id.startsWith('vacation_')) {
-                // Store bird for later - modal will show after celebration
                 setPendingBirdForSighting(bird);
             }
         } else {
-            // No GPS - still allow sharing via map picker for logged in users
-            // Skip for vacation birds
             if (!isGuestRef.current && userProfile?.id && !bird.id.startsWith('vacation_')) {
                 setPendingBirdForSighting(bird);
             }
@@ -950,7 +992,6 @@ export default function App() {
     const handleRemove = async (bird: Bird) => {
         const newIds = collectedIds.filter(id => id !== bird.id);
         
-        // Remove from vacation birds if applicable
         let newVacationBirds = vacationBirds;
         if (bird.id.startsWith('vacation_')) {
             newVacationBirds = vacationBirds.filter(vb => vb.id !== bird.id);
@@ -961,7 +1002,6 @@ export default function App() {
             }
         }
         
-        // Remove from community radar (bird_sightings)
         if (!isGuestRef.current && userProfile?.id && navigator.onLine) {
             const today = new Date().toISOString().split('T')[0];
             await supabase
@@ -971,18 +1011,15 @@ export default function App() {
                 .eq('bird_id', bird.id)
                 .eq('sighted_at', today);
             
-            console.log('[BirdNerd] Removed bird sighting from radar:', bird.name);
+            console.log('[Birbz] Removed bird sighting from radar:', bird.name);
         }
         
-        // Recalculate all XP and badges from scratch
         let recalculatedXp = 0;
         const recalculatedBadges: string[] = [];
         
-        // Calculate base XP for all remaining birds
         const remainingLocalBirds = BIRDS_DB.filter(b => newIds.includes(b.id));
         const remainingVacationBirds = newVacationBirds;
         
-        // Add XP for each bird
         remainingLocalBirds.forEach(b => {
             recalculatedXp += b.points || 10;
         });
@@ -990,7 +1027,6 @@ export default function App() {
             recalculatedXp += b.points || 25;
         });
         
-        // Recalculate which badges should still be earned
         const collectedBirds = remainingLocalBirds;
         const uniqueCountries = new Set(
             remainingVacationBirds
@@ -998,7 +1034,6 @@ export default function App() {
                 .map(b => b.country!.toLowerCase().trim())
         );
         
-        // Check each badge
         BADGES_DB.forEach(badge => {
             let stillEarned = false;
             const count = newIds.length;
@@ -1006,7 +1041,6 @@ export default function App() {
             switch (badge.condition) {
                 case 'count':
                     if (badge.category === 'streak') {
-                        // Streak badges stay earned once achieved
                         if (userProfile?.badges?.includes(badge.id)) {
                             stillEarned = true;
                         }
@@ -1032,13 +1066,11 @@ export default function App() {
                     }
                     break;
                 case 'time':
-                    // Time badges stay earned once achieved
                     if (userProfile?.badges?.includes(badge.id)) {
                         stillEarned = true;
                     }
                     break;
                 case 'level':
-                    // Will be checked after XP calculation
                     break;
                 case 'family_count':
                     if (badge.targetValue && badge.threshold) {
@@ -1062,7 +1094,6 @@ export default function App() {
             }
         });
         
-        // Check level badges based on final XP
         BADGES_DB.forEach(badge => {
             if (badge.condition === 'level' && badge.threshold) {
                 const levelInfo = LEVEL_THRESHOLDS.find(l => recalculatedXp < l.max) || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
@@ -1123,7 +1154,7 @@ export default function App() {
     };
 
     if (appLoading) {
-        return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade BirdNerd...</div>;
+        return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade Birbz...</div>;
     }
 
     if (!userProfile) {
@@ -1196,7 +1227,6 @@ export default function App() {
                 bonus={celebration.bonus}
                 onClose={() => {
                     setCelebration({ active: false, xp: 0 });
-                    // Show location share modal after celebration
                     if (pendingBirdForSighting) {
                         setShowLocationShareModal(true);
                     }
@@ -1231,7 +1261,7 @@ export default function App() {
                         })()
                     }}
                     discoveredAt={new Date().toLocaleDateString('de-DE')}
-                    discoveredBy={userProfile?.name || 'BirdNerd User'}
+                    discoveredBy={userProfile?.name || 'Birbz User'}
                     location={userLocation ? 'Deutschland' : undefined}
                     onClose={() => setLegendaryCardBird(null)}
                 />
@@ -1249,7 +1279,7 @@ export default function App() {
                     onUpdateCountry={handleUpdateCountry}
                     onUpdateImage={handleUpdateImage}
                     isCollected={collectedIds.includes(modalBird.id)}
-                    userName={userProfile?.name || 'BirdNerd User'}
+                    userName={userProfile?.name || 'Birbz User'}
                 />
             )}
 
@@ -1282,7 +1312,6 @@ export default function App() {
                 <QuizView 
                     onClose={() => setShowQuiz(false)} 
                     onQuizComplete={(score, total) => {
-                        // Update streak when quiz is completed
                         if (userProfile) {
                             const { profile: updatedProfile, justIncreased } = updateStreak(userProfile);
                             setUserProfile(updatedProfile);
@@ -1312,11 +1341,26 @@ export default function App() {
                             <Leaderboard 
                                 currentUser={userProfile} 
                                 currentXp={xp}
+                                swarm={userSwarm}
                                 onUpdateFriends={handleUpdateFriends}
+                                onOpenSwarmView={() => {
+                                    setShowLeaderboard(false);
+                                    setShowSwarmView(true);
+                                }}
                             />
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Swarm View Modal */}
+            {showSwarmView && userProfile && (
+                <SwarmView
+                    currentUser={userProfile}
+                    swarm={userSwarm}
+                    onSwarmChange={handleSwarmChange}
+                    onClose={() => setShowSwarmView(false)}
+                />
             )}
             
             {/* Location Share Modal */}
