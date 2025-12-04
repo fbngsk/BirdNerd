@@ -271,7 +271,7 @@ export const getSwarmDetails = async (
             name: m.name,
             avatarSeed: m.avatar_seed,
             xp: m.xp || 0,
-            collectedCount: m.collected_ids?.length || 0,
+            collectedCount: (m.collected_ids || []).filter((id: string) => !id.startsWith('vacation_')).length,
             isFounder: m.id === swarm.founder_id
         }));
 
@@ -293,7 +293,7 @@ export const getSwarmDetails = async (
 };
 
 /**
- * Schwarm-Sammlung laden (alle unique Vögel)
+ * Schwarm-Sammlung laden (alle unique Vögel, nur lokale - keine Urlaubsvögel)
  */
 export const getSwarmCollection = async (
     swarmId: string
@@ -308,7 +308,12 @@ export const getSwarmCollection = async (
 
         const allBirdIds = new Set<string>();
         members.forEach(m => {
-            (m.collected_ids || []).forEach((id: string) => allBirdIds.add(id));
+            (m.collected_ids || []).forEach((id: string) => {
+                // Urlaubsvögel ausfiltern - nur lokale Vögel zählen für Schwarm
+                if (!id.startsWith('vacation_')) {
+                    allBirdIds.add(id);
+                }
+            });
         });
 
         return Array.from(allBirdIds);
