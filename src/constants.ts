@@ -584,20 +584,6 @@ export const LEVEL_THRESHOLDS: LevelInfo[] = [
     { max: 999999, level: 10, title: 'Vogelgott', next: 999999 }
 ];
 
-export const MOCK_LEADERBOARDS: Record<LeaderboardScope, LeaderboardEntry[]> = {
-    circle: [
-        { rank: 1, name: 'WanderFalke23', xp: 1250, avatarSeed: 'falke' },
-        { rank: 2, name: 'Du (Ich)', xp: 0, avatarSeed: 'me', isUser: true }, 
-        { rank: 3, name: 'NaturLover', xp: 890, avatarSeed: 'nature' },
-    ],
-    global: [
-        { rank: 1, name: 'BirdGod_DE', xp: 15000, avatarSeed: 'god' },
-        { rank: 2, name: 'Naturschutz', xp: 12400, avatarSeed: 'nbu' },
-        { rank: 3, name: 'Orni_Berlin', xp: 5400, avatarSeed: 'orni' },
-        { rank: 4, name: 'Waldmeister', xp: 4900, avatarSeed: 'wald' },
-    ]
-};
-
 export const WIZARD_SIZES = [
     { id: 'spatz', label: 'Spatzengroß', icon: '🐦' },
     { id: 'amsel', label: 'Amselgroß', icon: '🦅' },
