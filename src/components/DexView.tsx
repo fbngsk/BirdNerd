@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BIRDS_DB, BIRD_FAMILIES } from '../constants';
-import { Bird, LocationType } from '../types';
-import { Home, Plane, Loader2, ChevronDown, ChevronUp, Search, X, CheckCircle, Filter } from 'lucide-react';
+import { Bird, LocationType, Swarm } from '../types';
+import { Home, Plane, Loader2, Search, X, CheckCircle, Users } from 'lucide-react';
+import { getSwarmCollection } from '../services/swarmService';
 
 // Simple cache to avoid re-fetching Wikipedia thumbnails constantly
 const THUMBNAIL_CACHE: Record<string, string> = {};
@@ -30,24 +31,24 @@ const FAMILY_ORDER = [
     'woodpeckers', 'corvids', 'tits', 'finches', 'thrushes', 'warblers', 'pigeons', 'buntings', 'other'
 ];
 
+type DexFilter = 'local' | 'vacation' | 'swarm';
+
 interface DexViewProps {
     collectedIds: string[];
-    vacationBirds?: Bird[]; // Dynamically collected vacation birds
+    vacationBirds?: Bird[];
+    swarm?: Swarm | null;
     onBirdClick: (bird: Bird) => void;
 }
 
 // Individual Card Component
 const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: boolean, onClick: () => void }) => {
-    // For vacation birds, use the stored realImg directly
     const initialImage = bird.realImg || THUMBNAIL_CACHE[bird.name] || null;
     const [imageUrl, setImageUrl] = useState<string | null>(initialImage);
     const [loading, setLoading] = useState(!initialImage);
 
     useEffect(() => {
-        // Skip fetching if we already have an image (either from realImg or cache)
         if (imageUrl) return; 
         
-        // Skip fetching for vacation birds - they should already have realImg
         if (bird.id.startsWith('vacation_')) {
             setLoading(false);
             return;
@@ -56,7 +57,6 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
         let isMounted = true;
         const fetchImage = async () => {
             try {
-                // Use scientific name for better accuracy
                 const searchName = bird.sciName || bird.name;
                 const res = await fetch(`https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`);
                 if (res.ok) {
@@ -74,7 +74,6 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
             }
         };
 
-        // Stagger requests slightly
         const timer = setTimeout(fetchImage, Math.random() * 1000);
         return () => {
             isMounted = false;
@@ -98,8 +97,7 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
                     <img 
                         src={imageUrl} 
                         alt={bird.name}
-                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover shadow-sm transition-all ${isCollected ? '' : 'grayscale opacity-60'}`} 
-                        loading="lazy"
+                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover shadow-sm transition-all ${isCollected ? '' : 'grayscale opacity-50'}`}
                     />
                 ) : (
                     <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center ${isCollected ? 'bg-gray-100' : 'bg-gray-200'}`}>
@@ -128,16 +126,29 @@ const DexBirdCard = ({ bird, isCollected, onClick }: { bird: Bird, isCollected: 
     );
 };
 
-export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = [], onBirdClick }) => {
-    const [filter, setFilter] = useState<LocationType>('local');
+export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = [], swarm, onBirdClick }) => {
+    const [filter, setFilter] = useState<DexFilter>('local');
     const [searchTerm, setSearchTerm] = useState('');
     const [onlyCollected, setOnlyCollected] = useState(false);
+    const [swarmBirdIds, setSwarmBirdIds] = useState<string[]>([]);
+    const [loadingSwarm, setLoadingSwarm] = useState(false);
     
     // Pull-to-refresh state
     const [refreshing, setRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const [startY, setStartY] = useState(0);
     const PULL_THRESHOLD = 80;
+
+    // Load swarm collection when tab is selected
+    useEffect(() => {
+        if (filter === 'swarm' && swarm?.id) {
+            setLoadingSwarm(true);
+            getSwarmCollection(swarm.id).then(ids => {
+                setSwarmBirdIds(ids);
+                setLoadingSwarm(false);
+            });
+        }
+    }, [filter, swarm?.id]);
     
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (window.scrollY === 0) {
@@ -157,28 +168,49 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
     const handleTouchEnd = useCallback(() => {
         if (pullDistance >= PULL_THRESHOLD && !refreshing) {
             setRefreshing(true);
-            // Simulate refresh - clear thumbnail cache
             Object.keys(THUMBNAIL_CACHE).forEach(key => delete THUMBNAIL_CACHE[key]);
-            setTimeout(() => {
-                setRefreshing(false);
-                setPullDistance(0);
-            }, 1000);
+            
+            // Reload swarm data if on swarm tab
+            if (filter === 'swarm' && swarm?.id) {
+                getSwarmCollection(swarm.id).then(ids => {
+                    setSwarmBirdIds(ids);
+                    setRefreshing(false);
+                    setPullDistance(0);
+                });
+            } else {
+                setTimeout(() => {
+                    setRefreshing(false);
+                    setPullDistance(0);
+                }, 1000);
+            }
         } else {
             setPullDistance(0);
         }
         setStartY(0);
-    }, [pullDistance, refreshing]);
+    }, [pullDistance, refreshing, filter, swarm?.id]);
+
+    // Determine which IDs to use for "collected" status
+    const activeCollectedIds = filter === 'swarm' ? swarmBirdIds : collectedIds;
     
-    // 1. Filter Birds by Location Mode
-    // For vacation mode, combine BIRDS_DB vacation birds with dynamically collected ones
-    let filteredBirds = filter === 'vacation' 
-        ? [...BIRDS_DB.filter(b => b.locationType === 'vacation'), ...vacationBirds]
-        : BIRDS_DB.filter(b => {
+    // Filter Birds
+    let filteredBirds: Bird[] = [];
+    
+    if (filter === 'vacation') {
+        filteredBirds = [...BIRDS_DB.filter(b => b.locationType === 'vacation'), ...vacationBirds];
+    } else if (filter === 'swarm') {
+        // Show all local birds, mark swarm-collected ones
+        filteredBirds = BIRDS_DB.filter(b => {
             const type = b.locationType || 'local';
-            return type === filter;
+            return type === 'local';
         });
+    } else {
+        filteredBirds = BIRDS_DB.filter(b => {
+            const type = b.locationType || 'local';
+            return type === 'local';
+        });
+    }
     
-    // 2. Apply search filter
+    // Apply search filter
     if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         filteredBirds = filteredBirds.filter(b => 
@@ -187,21 +219,23 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
         );
     }
     
-    // 3. Apply collected filter
+    // Apply collected filter
     if (onlyCollected) {
-        filteredBirds = filteredBirds.filter(b => collectedIds.includes(b.id));
+        filteredBirds = filteredBirds.filter(b => activeCollectedIds.includes(b.id));
     }
 
-    const collectedCount = filteredBirds.filter(b => collectedIds.includes(b.id)).length;
-    const totalCount = filter === 'local' ? BIRDS_DB.filter(b => (b.locationType || 'local') === 'local').length : filteredBirds.length;
+    const collectedCount = filteredBirds.filter(b => activeCollectedIds.includes(b.id)).length;
+    const totalCount = filter === 'local' 
+        ? BIRDS_DB.filter(b => (b.locationType || 'local') === 'local').length 
+        : filter === 'swarm'
+            ? BIRDS_DB.filter(b => (b.locationType || 'local') === 'local').length
+            : filteredBirds.length;
 
-    // 2. Group Birds by Family
+    // Group Birds by Family
     const groupedBirds = filteredBirds.reduce((acc, bird) => {
         let familyKey = 'other';
         
-        // Try to find matching family
         for (const [key, prefixes] of Object.entries(BIRD_FAMILIES)) {
-            // Check if scientific name contains any of the genus prefixes
             if (prefixes.some(prefix => bird.sciName.includes(prefix))) {
                 familyKey = key;
                 break;
@@ -247,21 +281,53 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
                 </div>
             </div>
 
-            {/* Tabs */}
+            {/* Tabs - 3 Tabs now */}
             <div className="flex p-1 bg-gray-100 rounded-xl mb-4">
                 <button 
                     onClick={() => setFilter('local')} 
-                    className={`flex-1 py-2 px-4 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${filter === 'local' ? 'bg-white text-teal shadow-sm' : 'text-gray-400'}`}
+                    className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${filter === 'local' ? 'bg-white text-teal shadow-sm' : 'text-gray-400'}`}
                 >
                     <Home size={14}/> Heimat
                 </button>
                 <button 
+                    onClick={() => setFilter('swarm')} 
+                    className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${filter === 'swarm' ? 'bg-white text-teal shadow-sm' : 'text-gray-400'}`}
+                    disabled={!swarm}
+                >
+                    <Users size={14}/> Schwarm
+                </button>
+                <button 
                     onClick={() => setFilter('vacation')} 
-                    className={`flex-1 py-2 px-4 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${filter === 'vacation' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400'}`}
+                    className={`flex-1 py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${filter === 'vacation' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400'}`}
                 >
                     <Plane size={14}/> Urlaub
                 </button>
             </div>
+
+            {/* Swarm Info Banner */}
+            {filter === 'swarm' && swarm && (
+                <div className="mb-4 p-3 bg-teal/10 border border-teal/20 rounded-xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="font-bold text-teal text-sm">{swarm.name}</div>
+                            <div className="text-xs text-gray-500">Gemeinsame Sammlung deines Schwarms</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-lg font-bold text-teal">{swarmBirdIds.length}</div>
+                            <div className="text-[10px] text-gray-400">Arten</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* No Swarm Message */}
+            {filter === 'swarm' && !swarm && (
+                <div className="mb-4 p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                    <div className="text-4xl mb-2">🪺</div>
+                    <div className="font-bold text-gray-600 mb-1">Kein Schwarm</div>
+                    <div className="text-xs text-gray-400">Tritt einem Schwarm bei, um die gemeinsame Sammlung zu sehen.</div>
+                </div>
+            )}
             
             {/* Search + Filter Row */}
             <div className="flex gap-2 mb-6">
@@ -284,7 +350,6 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
                     )}
                 </div>
                 
-                {/* Collected Filter Button */}
                 <button
                     onClick={() => setOnlyCollected(!onlyCollected)}
                     className={`px-3 py-2.5 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-all shrink-0 ${
@@ -308,67 +373,61 @@ export const DexView: React.FC<DexViewProps> = ({ collectedIds, vacationBirds = 
                 </div>
             )}
 
-            <div className="space-y-8">
-                {FAMILY_ORDER.map(familyKey => {
-                    const birds = groupedBirds[familyKey];
-                    if (!birds || birds.length === 0) return null;
+            {/* Loading state for swarm */}
+            {filter === 'swarm' && loadingSwarm && (
+                <div className="flex justify-center py-12">
+                    <Loader2 className="animate-spin text-teal" size={32} />
+                </div>
+            )}
 
-                    const familyCollected = birds.filter(b => collectedIds.includes(b.id)).length;
+            {/* Bird Grid */}
+            {!(filter === 'swarm' && loadingSwarm) && (
+                <div className="space-y-8">
+                    {FAMILY_ORDER.map(familyKey => {
+                        const birds = groupedBirds[familyKey];
+                        if (!birds || birds.length === 0) return null;
 
-                    return (
-                        <div key={familyKey} className="animate-slide-up">
-                            <div className="flex items-center justify-between mb-3 px-1">
-                                <h3 className="text-sm font-bold text-teal uppercase tracking-wider opacity-80">
-                                    {FAMILY_LABELS[familyKey] || 'Sonstige'}
-                                </h3>
-                                <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
-                                    {familyCollected}/{birds.length}
-                                </span>
+                        const familyCollected = birds.filter(b => activeCollectedIds.includes(b.id)).length;
+
+                        return (
+                            <div key={familyKey} className="animate-slide-up">
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <h3 className="text-sm font-bold text-teal uppercase tracking-wider opacity-80">
+                                        {FAMILY_LABELS[familyKey] || 'Sonstige'}
+                                    </h3>
+                                    <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                                        {familyCollected}/{birds.length}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                    {birds.map((bird) => (
+                                        <DexBirdCard 
+                                            key={bird.id}
+                                            bird={bird}
+                                            isCollected={activeCollectedIds.includes(bird.id)}
+                                            onClick={() => onBirdClick(bird)}
+                                        />
+                                    ))}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                {birds.map((bird) => (
-                                    <DexBirdCard 
-                                        key={bird.id}
-                                        bird={bird}
-                                        isCollected={collectedIds.includes(bird.id)}
-                                        onClick={() => onBirdClick(bird)}
-                                    />
-                                ))}
-                            </div>
+                        );
+                    })}
+
+                    {filteredBirds.length === 0 && (
+                        <div className="text-center py-16 text-gray-400">
+                            <Search size={40} className="mx-auto mb-4 opacity-30" />
+                            <p className="font-medium">
+                                {searchTerm 
+                                    ? `Kein Vogel gefunden für "${searchTerm}"`
+                                    : onlyCollected 
+                                        ? 'Noch keine Vögel gesammelt'
+                                        : 'Keine Vögel in dieser Kategorie'
+                                }
+                            </p>
                         </div>
-                    );
-                })}
-
-                {filteredBirds.length === 0 && (
-                    <div className="text-center py-16 text-gray-400">
-                        <Search size={40} className="mx-auto mb-4 opacity-30" />
-                        <p className="font-medium">
-                            {searchTerm 
-                                ? `Kein Vogel gefunden für "${searchTerm}"`
-                                : onlyCollected 
-                                    ? 'Du hast noch keine Vögel gesammelt'
-                                    : 'Keine Vögel in dieser Kategorie'
-                            }
-                        </p>
-                        {(searchTerm || onlyCollected) && (
-                            <button 
-                                onClick={() => { setSearchTerm(''); setOnlyCollected(false); }}
-                                className="mt-4 text-teal text-sm font-medium"
-                            >
-                                Filter zurücksetzen
-                            </button>
-                        )}
-                    </div>
-                )}
-            </div>
-            
-            <div className="mt-12 text-center text-gray-400 text-xs">
-                {filter === 'local' ? (
-                    <p>Tippe auf einen Vogel, um Details zu sehen.</p>
-                ) : (
-                    <p>Entdecke exotische Arten auf deinen Reisen.</p>
-                )}
-            </div>
-         </div>
+                    )}
+                </div>
+            )}
+        </div>
     );
 };
