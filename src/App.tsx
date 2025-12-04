@@ -1,4 +1,3 @@
-```typescript
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -1423,4 +1422,3 @@ export default function App() {
         </div>
     );
 }
-```
