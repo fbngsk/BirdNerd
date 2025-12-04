@@ -23,7 +23,7 @@ import { BADGES_DB, BIRDS_DB, BIRD_FAMILIES, LEVEL_THRESHOLDS, XP_CONFIG, calcul
 import { getLegendaryArtwork } from './legendaryArtworks';
 import { supabase } from './lib/supabaseClient';
 import { validateBirdLocation } from './services/birdRanges';
-import { getUserSwarm, joinSwarm } from './services/swarmService';
+import { getUserSwarm, joinSwarm, updateSwarmStreak, checkSwarmBadges, distributeSwarmBonus } from './services/swarmService';
 
 // ========================================
 // FEATURE FLAG: Legendary Cards
@@ -163,6 +163,10 @@ export default function App() {
     const [userSwarm, setUserSwarm] = useState<Swarm | null>(null);
     const [showSwarmView, setShowSwarmView] = useState(false);
     const [pendingSwarmCode, setPendingSwarmCode] = useState<string | null>(null);
+
+    // Schwarm Overlays
+    const [swarmStreakBonus, setSwarmStreakBonus] = useState<{ streak: number; xp: number } | null>(null);
+    const [swarmBadgeEarned, setSwarmBadgeEarned] = useState<{ name: string; emoji: string; xp: number } | null>(null);
 
     // Process sync queue when coming back online
     const processSyncQueue = async () => {
@@ -828,7 +832,7 @@ export default function App() {
         setUnusualSightingReason('');
     };
 
-    const handleCollect = (bird: Bird) => {
+    const handleCollect = async (bird: Bird) => {
         const today = new Date().toISOString().split('T')[0];
         const isNewSpecies = !collectedIds.includes(bird.id);
         
@@ -995,6 +999,51 @@ export default function App() {
             setTimeout(() => {
                 setLegendaryCardBird(bird);
             }, 2500);
+        }
+
+        // ========================================
+        // SCHWARM-STREAK & BADGES CHECKEN
+        // ========================================
+        if (userSwarm?.id && !isGuestRef.current) {
+            // Streak updaten
+            const streakResult = await updateSwarmStreak(userSwarm.id);
+            
+            if (streakResult.isNewStreakMilestone && streakResult.streakBonus > 0) {
+                // Bonus an alle verteilen
+                await distributeSwarmBonus(userSwarm.id, streakResult.streakBonus);
+                
+                // Lokalen XP-State auch updaten
+                setXp(prev => prev + streakResult.streakBonus);
+                
+                // Overlay zeigen (nach anderen Overlays)
+                setTimeout(() => {
+                    setSwarmStreakBonus({ 
+                        streak: streakResult.newStreak, 
+                        xp: streakResult.streakBonus 
+                    });
+                }, 3500);
+            }
+
+            // Badges checken
+            const badgeResult = await checkSwarmBadges(userSwarm.id);
+            
+            if (badgeResult.newBadges.length > 0) {
+                // Bonus an alle verteilen
+                await distributeSwarmBonus(userSwarm.id, badgeResult.totalBonusXp);
+                
+                // Lokalen XP-State auch updaten
+                setXp(prev => prev + badgeResult.totalBonusXp);
+                
+                // Bestes Badge zeigen
+                const bestBadge = badgeResult.newBadges.sort((a, b) => b.xpReward - a.xpReward)[0];
+                setTimeout(() => {
+                    setSwarmBadgeEarned({
+                        name: bestBadge.name,
+                        emoji: bestBadge.emoji,
+                        xp: bestBadge.xpReward
+                    });
+                }, streakResult.isNewStreakMilestone ? 6000 : 3500);
+            }
         }
     };
 
@@ -1253,6 +1302,54 @@ export default function App() {
                     streak={newStreak} 
                     onClose={() => setNewStreak(null)} 
                 />
+            )}
+
+            {/* Schwarm Streak Overlay */}
+            {swarmStreakBonus && (
+                <div 
+                    className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in"
+                    onClick={() => setSwarmStreakBonus(null)}
+                >
+                    <div className="bg-white rounded-3xl p-8 mx-4 text-center animate-scale-up max-w-sm">
+                        <div className="text-6xl mb-4">🪺🔥</div>
+                        <h2 className="text-2xl font-bold text-teal mb-2">
+                            Schwarm-Streak!
+                        </h2>
+                        <p className="text-4xl font-bold text-orange mb-2">
+                            {swarmStreakBonus.streak} Tage
+                        </p>
+                        <p className="text-gray-500 mb-4">
+                            Euer Schwarm loggt jeden Tag!
+                        </p>
+                        <div className="inline-block bg-green-100 text-green-600 font-bold px-4 py-2 rounded-full">
+                            +{swarmStreakBonus.xp} XP für alle!
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Schwarm Badge Overlay */}
+            {swarmBadgeEarned && (
+                <div 
+                    className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in"
+                    onClick={() => setSwarmBadgeEarned(null)}
+                >
+                    <div className="bg-white rounded-3xl p-8 mx-4 text-center animate-scale-up max-w-sm">
+                        <div className="text-6xl mb-4">{swarmBadgeEarned.emoji}</div>
+                        <h2 className="text-2xl font-bold text-teal mb-2">
+                            Schwarm-Badge!
+                        </h2>
+                        <p className="text-xl font-bold text-gray-800 mb-2">
+                            {swarmBadgeEarned.name}
+                        </p>
+                        <p className="text-gray-500 mb-4">
+                            Euer Schwarm hat ein neues Badge freigeschaltet!
+                        </p>
+                        <div className="inline-block bg-green-100 text-green-600 font-bold px-4 py-2 rounded-full">
+                            +{swarmBadgeEarned.xp} XP für alle!
+                        </div>
+                    </div>
+                </div>
             )}
             
             {ENABLE_LEGENDARY_CARDS && legendaryCardBird && (
