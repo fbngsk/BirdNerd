@@ -168,7 +168,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
                 
                 <h2 className="text-2xl font-bold text-teal mb-2">
-                    {isResetPassword ? 'Passwort zurücksetzen' : isLogin ? 'Willkommen zurück!' : 'Neu bei Birbz?'}
+                    {isResetPassword ? 'Passwort zurücksetzen' : isLogin ? 'Willkommen zurück!' : 'Neu bei BirdNerd?'}
                 </h2>
                 <p className="text-gray-500 mb-8 text-sm">
                     {isResetPassword 
