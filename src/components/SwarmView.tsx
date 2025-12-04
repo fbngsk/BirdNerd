@@ -48,15 +48,14 @@ export const SwarmView: React.FC<SwarmViewProps> = ({
     // Load swarm details
     useEffect(() => {
         if (swarm?.id) {
-            loadSwarmDetails();
-            loadCollection();
+            loadSwarmDetails(swarm.id);
+            loadCollection(swarm.id);
         }
     }, [swarm?.id]);
 
-    const loadSwarmDetails = async () => {
-        if (!swarm?.id) return;
+    const loadSwarmDetails = async (swarmId: string) => {
         setLoading(true);
-        const { swarm: updatedSwarm, members: loadedMembers } = await getSwarmDetails(swarm.id);
+        const { swarm: updatedSwarm, members: loadedMembers } = await getSwarmDetails(swarmId);
         if (updatedSwarm) {
             onSwarmChange(updatedSwarm);
         }
@@ -64,9 +63,8 @@ export const SwarmView: React.FC<SwarmViewProps> = ({
         setLoading(false);
     };
 
-    const loadCollection = async () => {
-        if (!swarm?.id) return;
-        const ids = await getSwarmCollection(swarm.id);
+    const loadCollection = async (swarmId: string) => {
+        const ids = await getSwarmCollection(swarmId);
         setSwarmBirdIds(ids);
     };
 
@@ -142,7 +140,7 @@ export const SwarmView: React.FC<SwarmViewProps> = ({
     };
 
     const handleRename = async () => {
-        if (!swarm || !editName.trim() || editName.length < 3) {
+        if (!swarm?.id || !editName.trim() || editName.length < 3) {
             setError('Name muss mindestens 3 Zeichen haben.');
             return;
         }
