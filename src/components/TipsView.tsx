@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; 
 import { Heart, Eye, TreePine, Bird, Calendar, Award, Shield, AlertTriangle } from 'lucide-react';
 
 // Migration data for German birds
