@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; 
 import { Home, BookOpen, Bird, MapPin } from 'lucide-react';
 import { TabType } from '../types';
 
