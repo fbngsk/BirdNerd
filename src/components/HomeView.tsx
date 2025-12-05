@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { Target, Trophy, Clock, ChevronRight, Camera, GraduationCap } from 'lucide-react';
 import { UserProfile, Bird } from '../types';
 import { BIRDS_DB } from '../constants';
