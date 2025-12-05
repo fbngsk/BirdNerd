@@ -1227,7 +1227,7 @@ export default function App() {
     xp={xp}
     collectedIds={collectedIds}
     isVacationMode={isVacationMode}
-    onShowLeaderboard={() => setActiveTab('circles')}
+    onShowLeaderboard={() => setShowLeaderboard(true)}
     onNavigateToDex={() => setActiveTab('dex')}
     onBirdClick={setModalBird}
     onStartQuiz={() => setShowQuiz(true)}
