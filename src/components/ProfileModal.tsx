@@ -27,7 +27,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
     const [showLegal, setShowLegal] = useState(false);
     const [showEhrenkodex, setShowEhrenkodex] = useState(false);
     
-    // Block body scroll when modal is open
     useEffect(() => {
         document.body.style.overflow = 'hidden';
         return () => {
@@ -41,11 +40,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
     const levelInfo = getLevelInfo(xp);
     const userBadges = user.badges || [];
     
-    // Challenge share messages
     const challengeMessages = [
         `🐦 ${user.name} fordert dich zum Vogelduell! Mit ${collectedCount} Arten und ${xp} XP – schaffst du mehr?`,
         `🔥 ${user.name} hat ${collectedCount} Vogelarten entdeckt! Traust du dich zum Duell?`,
-        `👀 ${user.name} ist Level ${levelInfo.level} bei Birbz! Kannst du das toppen?`,
+        `👀 ${user.name} ist Level ${levelInfo.level} bei BirdNerd! Kannst du das toppen?`,
         `🏆 ${collectedCount} Vögel, ${xp} XP – ${user.name} wartet auf Herausforderer!`,
         `🦅 ${user.name} ruft zum großen Vogelduell! Wer entdeckt mehr Arten?`,
     ];
@@ -58,12 +56,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Birbz Challenge',
+                    title: 'BirdNerd Challenge',
                     text: message,
                     url: url,
                 });
             } catch (err) {
-                // User cancelled or error - fallback to clipboard
                 if ((err as Error).name !== 'AbortError') {
                     await navigator.clipboard.writeText(fullText);
                     setShareSuccess(true);
@@ -71,18 +68,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                 }
             }
         } else {
-            // Fallback: copy to clipboard
             await navigator.clipboard.writeText(fullText);
             setShareSuccess(true);
             setTimeout(() => setShareSuccess(false), 2000);
         }
     };
     
-    // Get collected legendary birds
     const legendaryBirds = BIRDS_DB.filter(b => b.tier === 'legendary');
     const collectedLegendary = legendaryBirds.filter(b => collectedIds.includes(b.id));
 
-    // Categorize Badges
     const categories = {
         milestone: { label: 'Meilensteine', icon: <Star size={16}/>, badges: BADGES_DB.filter(b => b.category === 'milestone') },
         streak: { label: 'Zeit & Streaks', icon: <Clock size={16}/>, badges: BADGES_DB.filter(b => b.category === 'streak') },
@@ -97,7 +91,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
         >
             <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
                 
-                {/* Compact Header */}
+                {/* Header */}
                 <div className="bg-teal p-4 relative">
                     <button onClick={onClose} className="absolute top-3 right-3 p-2 text-white/80 hover:text-white bg-white/10 rounded-full">
                         <X size={20}/>
@@ -222,7 +216,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                         </div>
                     ) : (
                         <div className="space-y-8">
-                            {/* Badges List */}
                             {Object.entries(categories).map(([key, cat]) => (
                                 <div key={key} className="animate-slide-up">
                                     <h3 className="font-bold text-teal mb-3 flex items-center gap-2 text-sm uppercase tracking-wider opacity-80 bg-teal/5 p-2 rounded-lg">
@@ -247,16 +240,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                             ))}
                         </div>
                     )}
-
-                    <div className="border-t border-gray-100 pt-6 mt-6">
-                        <button 
-                            onClick={onLogout}
-                            className="w-full flex items-center justify-center gap-2 text-red-500 font-bold text-sm p-3 hover:bg-red-50 rounded-xl transition-colors"
-                        >
-                            <LogOut size={16} />
-                            Profil löschen / Neu starten
-                        </button>
-                    </div>
                 </div>
 
                 {/* Badge Details Overlay */}
@@ -278,7 +261,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                                     <div className="text-xs font-bold text-gray-400 uppercase mb-2">Anforderung</div>
                                     <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                                         <ArrowRight size={14} className="text-teal" />
-                                        {selectedBadge.condition === 'count' && `Sammle ${selectedBadge.threshold} Vögel` + (selectedBadge.category === 'streak' ? ' in Folge' : '')}
+                                        {selectedBadge.condition === 'count' && `Sammle ${selectedBadge.threshold} Vögel`}
                                         {selectedBadge.condition === 'family_count' && `Sammle ${selectedBadge.threshold} Arten dieser Familie`}
                                         {selectedBadge.condition === 'time' && `Logge einen Vogel zwischen ${selectedBadge.startHour}:00 und ${selectedBadge.endHour}:00 Uhr`}
                                         {selectedBadge.condition === 'level' && `Erreiche Level ${selectedBadge.threshold}`}
@@ -383,8 +366,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                     </div>
                 )}
                 
-                {/* Footer Actions */}
-             {/* Ehrenkodex Modal */}
+                {/* Ehrenkodex Modal */}
                 {showEhrenkodex && (
                     <div className="absolute inset-0 bg-white z-50 overflow-y-auto">
                         <div className="p-6">
@@ -460,4 +442,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
                     <div className="flex gap-2">
                         <button 
                             onClick={onLogout}
-                            className="flex-1 py-3 bg-gray-100 text
+                            className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200"
+                        >
+                            <LogOut size={16} /> Abmelden
+                        </button>
+                        <button 
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="py-3 px-4 bg-red-50 text-red-500 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
