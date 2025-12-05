@@ -1,4 +1,4 @@
-export type TabType = 'home' | 'dex' | 'radar' | 'tips' | 'quiz';
+export type TabType = 'home' | 'dex' | 'radar' | 'swarm' | 'quiz';
 export type LocationType = 'local' | 'vacation';
 export type LocationSharePreference = 'always' | 'never' | 'ask';
 
