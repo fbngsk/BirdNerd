@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { X, Award, Trophy, Calendar, LogOut, ArrowRight, Lock, Star, Activity, Users, Clock, MapPin, Sparkles, Share2, Trash2, ExternalLink } from 'lucide-react';
 import { UserProfile, Badge, Bird } from '../types';
 import { BADGES_DB, LEVEL_THRESHOLDS, BIRDS_DB } from '../constants';
