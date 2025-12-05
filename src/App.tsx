@@ -35,13 +35,13 @@ const ENABLE_LEGENDARY_CARDS = true;
 // ========================================
 const CACHE_VERSION = 2;
 const CACHE_KEYS = {
-    VERSION: 'birbz_cacheVersion',
-    USER_PROFILE: 'birbz_userProfile',
-    COLLECTED_IDS: 'birbz_collectedIds',
-    XP: 'birbz_xp',
-    VACATION_BIRDS: 'birbz_vacationBirds',
-    KNOWN_LOCATIONS: 'birbz_knownLocations',
-    PENDING_SYNC: 'birbz_pendingSync'
+    VERSION: 'birdnerd_cacheVersion',
+    USER_PROFILE: 'birdnerd_userProfile',
+    COLLECTED_IDS: 'birdnerd_collectedIds',
+    XP: 'birdnerd_xp',
+    VACATION_BIRDS: 'birdnerd_vacationBirds',
+    KNOWN_LOCATIONS: 'birdnerd_knownLocations',
+    PENDING_SYNC: 'birdnerd_pendingSync'
 };
 
 interface PendingSyncItem {
@@ -54,7 +54,7 @@ const validateCacheVersion = () => {
     try {
         const storedVersion = localStorage.getItem(CACHE_KEYS.VERSION);
         if (storedVersion !== String(CACHE_VERSION)) {
-            console.log('[Birbz] Cache version mismatch, clearing old cache');
+            console.log('[BirdNerd] Cache version mismatch, clearing old cache');
             Object.values(CACHE_KEYS).forEach(key => {
                 if (key !== CACHE_KEYS.VERSION) {
                     localStorage.removeItem(key);
@@ -63,7 +63,7 @@ const validateCacheVersion = () => {
             localStorage.setItem(CACHE_KEYS.VERSION, String(CACHE_VERSION));
         }
     } catch (e) {
-        console.warn('[Birbz] Cache version check failed:', e);
+        console.warn('[BirdNerd] Cache version check failed:', e);
     }
 };
 
@@ -73,7 +73,7 @@ const saveToCache = (key: string, data: any) => {
     try {
         localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-        console.warn('[Birbz] Cache save failed:', e);
+        console.warn('[BirdNerd] Cache save failed:', e);
     }
 };
 
@@ -87,7 +87,7 @@ const loadFromCache = <T,>(key: string, fallback: T): T => {
         }
         return parsed;
     } catch (e) {
-        console.warn('[Birbz] Corrupted cache detected, removing:', key);
+        console.warn('[BirdNerd] Corrupted cache detected, removing:', key);
         try {
             localStorage.removeItem(key);
         } catch {}
@@ -176,7 +176,7 @@ export default function App() {
         const queue = getSyncQueue();
         if (queue.length === 0) return;
         
-        console.log('[Birbz] Processing sync queue:', queue.length, 'items');
+        console.log('[BirdNerd] Processing sync queue:', queue.length, 'items');
         setHasPendingSync(true);
         
         const { data: { user } } = await supabase.auth.getUser();
@@ -209,7 +209,7 @@ export default function App() {
                         break;
                 }
             } catch (error) {
-                console.error('[Birbz] Sync error:', error);
+                console.error('[BirdNerd] Sync error:', error);
                 hasErrors = true;
             }
         }
@@ -224,7 +224,7 @@ export default function App() {
             clearSyncQueue();
             setHasPendingSync(false);
             setSyncSuccess(true);
-            console.log('[Birbz] Sync complete');
+            console.log('[BirdNerd] Sync complete');
             setTimeout(() => setSyncSuccess(false), 2000);
         }
     };
@@ -328,7 +328,7 @@ export default function App() {
 
     const getLocationKey = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
 
-    // Handle invite links (birbz.de/s/CODE)
+    // Handle invite links (BirdNerd.de/s/CODE)
     useEffect(() => {
         const checkInviteLink = () => {
             const path = window.location.pathname;
@@ -373,7 +373,7 @@ export default function App() {
             setAppLoading(true);
             
             if (!navigator.onLine) {
-                console.log('[Birbz] Offline - loading from cache');
+                console.log('[BirdNerd] Offline - loading from cache');
                 const cachedProfile = loadFromCache<UserProfile | null>(CACHE_KEYS.USER_PROFILE, null);
                 const cachedIds = loadFromCache<string[]>(CACHE_KEYS.COLLECTED_IDS, []);
                 const cachedXp = loadFromCache<number>(CACHE_KEYS.XP, 0);
@@ -472,7 +472,7 @@ export default function App() {
                     }
                 }
             } catch (error) {
-                console.error('[Birbz] Session load error, trying cache:', error);
+                console.error('[BirdNerd] Session load error, trying cache:', error);
                 const cachedProfile = loadFromCache<UserProfile | null>(CACHE_KEYS.USER_PROFILE, null);
                 if (cachedProfile) {
                     setUserProfile(cachedProfile);
@@ -490,10 +490,10 @@ export default function App() {
         let isInitialLoad = true;
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log('[Birbz] Auth state change:', event, 'initial:', isInitialLoad);
+            console.log('[BirdNerd] Auth state change:', event, 'initial:', isInitialLoad);
             
             if (event === 'SIGNED_IN' && session?.user && !isInitialLoad) {
-                console.log('[Birbz] User signed in, skipping reload');
+                console.log('[BirdNerd] User signed in, skipping reload');
             } else if (event === 'SIGNED_OUT' && !isGuestRef.current) {
                 setUserProfile(null);
                 setCollectedIds([]);
@@ -755,9 +755,9 @@ export default function App() {
         if (navigator.onLine) {
             const { error } = await supabase.from('bird_sightings').insert(sightingData);
             if (error) {
-                console.error('[Birbz] Failed to save sighting:', error);
+                console.error('[BirdNerd] Failed to save sighting:', error);
             } else {
-                console.log('[Birbz] Sighting saved:', bird.name, shouldFlag ? '(flagged)' : '');
+                console.log('[BirdNerd] Sighting saved:', bird.name, shouldFlag ? '(flagged)' : '');
             }
         } else {
             addToSyncQueue({
@@ -810,7 +810,7 @@ export default function App() {
     const handleSkipLocationShare = () => {
         setShowLocationShareModal(false);
         setPendingBirdForSighting(null);
-        console.log('[Birbz] User skipped location sharing');
+        console.log('[BirdNerd] User skipped location sharing');
     };
     
     const handleUnusualSightingConfirm = async () => {
@@ -1069,7 +1069,7 @@ export default function App() {
                 .eq('bird_id', bird.id)
                 .eq('sighted_at', today);
             
-            console.log('[Birbz] Removed bird sighting from radar:', bird.name);
+            console.log('[BirdNerd] Removed bird sighting from radar:', bird.name);
         }
         
         let recalculatedXp = 0;
@@ -1212,7 +1212,7 @@ export default function App() {
     };
 
     if (appLoading) {
-        return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade Birbz...</div>;
+        return <div className="h-screen flex items-center justify-center bg-cream text-teal font-bold">Lade BirdNerd...</div>;
     }
 
     if (!userProfile) {
@@ -1368,7 +1368,7 @@ export default function App() {
                         })()
                     }}
                     discoveredAt={new Date().toLocaleDateString('de-DE')}
-                    discoveredBy={userProfile?.name || 'Birbz User'}
+                    discoveredBy={userProfile?.name || 'BirdNerd User'}
                     location={userLocation ? 'Deutschland' : undefined}
                     onClose={() => setLegendaryCardBird(null)}
                 />
@@ -1386,7 +1386,7 @@ export default function App() {
                     onUpdateCountry={handleUpdateCountry}
                     onUpdateImage={handleUpdateImage}
                     isCollected={collectedIds.includes(modalBird.id)}
-                    userName={userProfile?.name || 'Birbz User'}
+                    userName={userProfile?.name || 'BirdNerd User'}
                 />
             )}
 
