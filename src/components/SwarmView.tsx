@@ -171,8 +171,8 @@ export const SwarmView: React.FC<SwarmViewProps> = ({
 
     const shareInvite = async () => {
         if (!swarm) return;
-        const url = `https://birbz.de/s/${swarm.inviteCode}`;
-        const text = `Komm in meinen Schwarm "${swarm.name}" auf Birbz! 🐦`;
+        const url = `https://birdnerd.app/s/${swarm.inviteCode}`;
+        const text = `Komm in meinen Schwarm "${swarm.name}" auf BirdNerd! 🐦`;
         
         if (navigator.share) {
             try {
