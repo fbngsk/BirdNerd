@@ -25,6 +25,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, xp, collectedC
     const [shareSuccess, setShareSuccess] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showLegal, setShowLegal] = useState(false);
+    const [showEhrenkodex, setShowEhrenkodex] = useState(false);
     
     // Block body scroll when modal is open
     useEffect(() => {
