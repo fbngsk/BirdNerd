@@ -276,7 +276,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
 
   return (
     <div className="flex flex-col bg-cream relative z-10 isolate" style={{ height: 'calc(100vh - 120px)' }}>
-      {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <MapPin className="text-teal" size={24} />
@@ -306,7 +305,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
         </div>
       </div>
 
-      {/* Filter Dropdown */}
       {showFilters && (
         <div className="absolute top-16 right-4 z-[1000] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           {TIME_FILTERS.map(filter => (
@@ -326,11 +324,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
         </div>
       )}
 
-      {/* Map Container */}
       <div className="flex-1 relative min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0" />
         
-        {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-[500]">
             <div className="flex flex-col items-center gap-2">
@@ -340,7 +336,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </div>
         )}
 
-        {/* Error Message */}
         {error && !loading && (
           <div className="absolute top-4 left-4 right-4 z-[500] bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
             <Info size={20} className="text-red-500 flex-shrink-0" />
@@ -348,7 +343,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </div>
         )}
 
-        {/* Center on User Button */}
         {userLocation && (
           <button
             onClick={centerOnUser}
@@ -358,7 +352,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </button>
         )}
 
-        {/* Legend */}
         <div className="absolute bottom-32 left-4 z-[500] bg-white rounded-xl shadow-lg p-3 text-xs">
           <p className="font-bold text-gray-700 mb-2">Legende</p>
           <div className="space-y-1">
@@ -381,7 +374,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </div>
         </div>
 
-        {/* Cluster List Panel */}
         {selectedCluster && !selectedSighting && (
           <div className="absolute bottom-32 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -422,12 +414,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             </div>
             
             <div className="p-3 border-t border-gray-100">
-              
-                href={`https://www.google.com/maps/search/?api=1&query=${selectedCluster.lat},${selectedCluster.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 bg-teal text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition-colors"
-              >
+              <a href={`https://www.google.com/maps/search/?api=1&query=${selectedCluster.lat},${selectedCluster.lng}`} target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-teal text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition-colors">
                 <Navigation size={18} />
                 Route planen
               </a>
@@ -435,7 +422,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </div>
         )}
 
-        {/* Single Sighting Panel */}
         {selectedSighting && (
           <div className="absolute bottom-32 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
             <button
@@ -476,12 +462,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             </div>
             
             <div className="mt-4 pt-4 border-t border-gray-100">
-              
-                href={`https://www.google.com/maps/search/?api=1&query=${selectedSighting.lat},${selectedSighting.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 bg-teal text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition-colors"
-              >
+              <a href={`https://www.google.com/maps/search/?api=1&query=${selectedSighting.lat},${selectedSighting.lng}`} target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-teal text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition-colors">
                 <Navigation size={18} />
                 Route planen
               </a>
