@@ -57,7 +57,6 @@ const clusterSightings = (sightings: Sighting[]): ClusteredSighting[] => {
   const clusters: Map<string, ClusteredSighting> = new Map();
   
   sightings.forEach(sighting => {
-    // Round to ~200m grid (0.002 degrees ≈ 200m)
     const gridLat = Math.round(Number(sighting.lat) * 500) / 500;
     const gridLng = Math.round(Number(sighting.lng) * 500) / 500;
     const key = `${gridLat},${gridLng}`;
@@ -66,7 +65,6 @@ const clusterSightings = (sightings: Sighting[]): ClusteredSighting[] => {
       const cluster = clusters.get(key)!;
       cluster.sightings.push(sighting);
       
-      // Update primary rarity if this one is rarer
       if (getRarityPriority(sighting.bird_rarity) > getRarityPriority(cluster.primaryRarity)) {
         cluster.primaryRarity = sighting.bird_rarity;
       }
@@ -98,11 +96,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
   const [showFilters, setShowFilters] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // Default center (Germany)
   const defaultCenter = { lat: 51.1657, lng: 10.4515 };
   const center = userLocation || defaultCenter;
 
-  // Load Leaflet CSS and JS dynamically
   useEffect(() => {
     if ((window as any).L) {
       setMapReady(true);
@@ -127,7 +123,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     };
   }, []);
 
-  // Initialize map when Leaflet is ready
   useEffect(() => {
     if (!mapReady || !mapContainerRef.current || mapRef.current) return;
 
@@ -167,7 +162,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     mapRef.current = map;
   }, [mapReady, center.lat, center.lng, userLocation]);
 
-  // Fetch sightings
   const fetchSightings = async () => {
     setLoading(true);
     setError(null);
@@ -189,7 +183,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
       console.log('[Radar] Loaded sightings:', data?.length || 0);
       setSightings(data || []);
       
-      // Cluster the sightings
       const clustered = clusterSightings(data || []);
       console.log('[Radar] Clustered into:', clustered.length, 'locations');
       setClusters(clustered);
@@ -205,19 +198,16 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     fetchSightings();
   }, [timeFilter]);
 
-  // Update markers when clusters change
   useEffect(() => {
     if (!mapRef.current || !(window as any).L) return;
 
     const L = (window as any).L;
 
-    // Clear existing markers
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
     console.log('[Radar] Adding markers for', clusters.length, 'clusters');
 
-    // Add cluster markers
     clusters.forEach(cluster => {
       const color = getRarityColor(cluster.primaryRarity);
       const count = cluster.sightings.length;
@@ -261,7 +251,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     console.log('[Radar] Markers added:', markersRef.current.length);
   }, [clusters, mapReady]);
 
-  // Center on user location
   const centerOnUser = () => {
     if (userLocation && mapRef.current) {
       mapRef.current.setView([userLocation.lat, userLocation.lng], 13, {
@@ -270,7 +259,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     }
   };
 
-  // Format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
@@ -282,7 +270,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     return date.toLocaleDateString('de-DE');
   };
 
-  // Handle selecting a bird from cluster list
   const handleSelectBirdFromCluster = (sighting: Sighting) => {
     setSelectedSighting(sighting);
   };
@@ -300,7 +287,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Time Filter */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700"
@@ -310,7 +296,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
           
-          {/* Refresh */}
           <button
             onClick={fetchSightings}
             disabled={loading}
@@ -396,7 +381,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
           </div>
         </div>
 
-        {/* Cluster List Panel (multiple birds at location) */}
+        {/* Cluster List Panel */}
         {selectedCluster && !selectedSighting && (
           <div className="absolute bottom-32 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -415,7 +400,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             </div>
             
             <div className="max-h-64 overflow-y-auto">
-              {selectedCluster.sightings.map((sighting, index) => (
+              {selectedCluster.sightings.map((sighting) => (
                 <button
                   key={sighting.id}
                   onClick={() => handleSelectBirdFromCluster(sighting)}
@@ -456,10 +441,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
             <button
               onClick={() => {
                 setSelectedSighting(null);
-                // If we came from a cluster, go back to cluster view
-                if (selectedCluster) {
-                  // Keep cluster open
-                } else {
+                if (!selectedCluster) {
                   setSelectedCluster(null);
                 }
               }}
@@ -468,7 +450,6 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
               <X size={20} />
             </button>
             
-            {/* Back button if from cluster */}
             {selectedCluster && (
               <button
                 onClick={() => setSelectedSighting(null)}
