@@ -287,7 +287,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ userLocation, onClose }) => 
     setSelectedSighting(sighting);
   };
 
-return (
+  return (
     <div className="flex flex-col bg-cream relative z-10 isolate" style={{ height: 'calc(100vh - 120px)' }}>
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
@@ -367,14 +367,14 @@ return (
         {userLocation && (
           <button
             onClick={centerOnUser}
-            className="absolute bottom-24 right-4 z-[500] w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-teal hover:bg-gray-50 transition-colors"
+            className="absolute bottom-32 right-4 z-[500] w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-teal hover:bg-gray-50 transition-colors"
           >
             <Navigation size={24} />
           </button>
         )}
 
         {/* Legend */}
-        <div className="absolute bottom-24 left-4 z-[500] bg-white rounded-xl shadow-lg p-3 text-xs">
+        <div className="absolute bottom-32 left-4 z-[500] bg-white rounded-xl shadow-lg p-3 text-xs">
           <p className="font-bold text-gray-700 mb-2">Legende</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ return (
 
         {/* Cluster List Panel (multiple birds at location) */}
         {selectedCluster && !selectedSighting && (
-          <div className="absolute bottom-24 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+          <div className="absolute bottom-32 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin size={18} className="text-teal" />
@@ -437,7 +437,7 @@ return (
             </div>
             
             <div className="p-3 border-t border-gray-100">
-              <a
+              
                 href={`https://www.google.com/maps/search/?api=1&query=${selectedCluster.lat},${selectedCluster.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -452,7 +452,7 @@ return (
 
         {/* Single Sighting Panel */}
         {selectedSighting && (
-          <div className="absolute bottom-24 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
+          <div className="absolute bottom-32 left-4 right-4 z-[1000] bg-white rounded-2xl shadow-2xl p-5 animate-slide-up">
             <button
               onClick={() => {
                 setSelectedSighting(null);
@@ -495,7 +495,7 @@ return (
             </div>
             
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <a
+              
                 href={`https://www.google.com/maps/search/?api=1&query=${selectedSighting.lat},${selectedSighting.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
