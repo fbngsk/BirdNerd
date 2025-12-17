@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getAvatarUrl } from '../services/birdService';
 
 interface OnboardingProps {
-    onComplete: (profile: UserProfile) => void;
+    onComplete: (profile: UserProfile) => void; 
 }
 
 type ViewMode = 'waitlist' | 'login' | 'register' | 'reset-password';
