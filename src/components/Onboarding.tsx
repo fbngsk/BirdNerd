@@ -315,18 +315,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                 Hier anmelden
                             </button>
                         </div>
-
-                        <div className="mt-6 pt-6 border-t border-gray-100">
-                            <button 
-                                onClick={handleGuestLogin}
-                                className="w-full py-3 bg-gray-100 text-gray-500 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
-                            >
-                                <Ghost size={16} />
-                                Gastzugang (Demo)
-                            </button>
-                        </div>
-                    </>
-                )}
+                        
 
                 {/* ==================== LOGIN VIEW ==================== */}
                 {mode === 'login' && (
