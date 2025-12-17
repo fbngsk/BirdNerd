@@ -18,7 +18,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [inviteToken, setInviteToken] = useState<string | null>(null);
-
+ 
     // Form Data
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
